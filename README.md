@@ -26,9 +26,8 @@ The project was built in a modular approach. Below are the links to the detailed
 * **Academic Documentation:** [📄 Read doc_justificacao_qaoa.md](doc_justificacao_qaoa.md)
 * **Summary:** A theoretical essay that exposes the limitations of the classical architecture implemented in the previous steps. The text scientifically justifies the need to adopt QAOA to mitigate "stochastic inefficiency" through massively parallel processing via superposition and phase interference.
 
----
+### 4. QUBO Model and Neighborhood Interaction
+* **Source Code:** `qubo_network_evolution.py`
+* **Technical Documentation:** [📄 Read doc_qubo_evolution.md](doc_qubo_evolution.md)
+* **Summary:** Upgrades the model to a Quadratic Unconstrained Binary Optimization (QUBO) architecture. Introduces coupled penalty terms ($Z_iZ_j$) for adjacent LEDs, creating spatial frustration. Demonstrates the algorithm's capability to balance linear rewards with quadratic penalties to resolve spatial conflicts and find complex distribution patterns.
 
-## Next Steps (In Development)
-
-* **QUBO Model Implementation:** Transition from the linear Hamiltonian to the *Quadratic Unconstrained Binary Optimization* model, following the study roadmap for operators and observables.
-* **Neighborhood Interaction:** Addition of coupled penalty terms ($Z_iZ_j$) to the Lattice evaluator, forcing the algorithm to respect complex spatial rules (e.g., restriction on the simultaneous activation of adjacent streetlights).
