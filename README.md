@@ -28,6 +28,6 @@ The project was built in a modular approach. Below are the links to the detailed
 
 ### 4. QUBO Model and Neighborhood Interaction
 * **Source Code:** `qubo_network_evolution.py`
-* **Technical Documentation:** [📄 Read doc_qubo_evolution.md](doc_qubo_evolution.md)
+* **Technical Documentation:** [📄 Read doc_qubo_evolution.md](doc_qubo_ev.md)
 * **Summary:** Upgrades the model to a Quadratic Unconstrained Binary Optimization (QUBO) architecture. Introduces coupled penalty terms ($Z_iZ_j$) for adjacent LEDs, creating spatial frustration. Demonstrates the algorithm's capability to balance linear rewards with quadratic penalties to resolve spatial conflicts and find complex distribution patterns.
 
