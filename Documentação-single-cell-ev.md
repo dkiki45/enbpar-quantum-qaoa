@@ -1,38 +1,38 @@
-# Documentação Técnica: Evolução de Indivíduo Quântico (Single Cell Evolution)
+# Technical Documentation: Single Cell Evolution
 
-**Objetivo do Script:**
-Validar a integração entre a estrutura de dados evolutiva (LatticeCell), o avaliador físico (Hamiltoniano) e o algoritmo de minimização (Hill Climbing). O código prova que o sistema consegue treinar um Qubit "cego" a encontrar o Estado Fundamental (*Ground State*) de forma autônoma.
-
----
-
-## 1. A Estrutura Biológica (`LatticeCell`)
-* **O que é:** A planta fundamental de um indivíduo do nosso ecossistema evolutivo.
-* **Função:** Armazena o "DNA" do nosso LED, especificamente o ângulo de rotação quântica na variável `theta`. Possui a propriedade `fitness`, que recebe a avaliação da física.
-
-## 2. O Avaliador Físico (Hamiltoniano)
-* **O que é:** A função de custo clássica mapeada para o ambiente quântico.
-* **Função:** Definimos um Hamiltoniano base ($H = 1.0 \times Z_0$). As funções calculam o **Valor Esperado** do circuito. Energias altas representam "multas" (péssimo fitness), energias baixas representam "economia" (bom fitness).
-
-## 3. O Motor de Integração (`evaluate_cell_fitness`)
-Função que conecta os mundos biológico e físico:
-1. Extrai o `theta` da célula.
-2. Cria um circuito Qiskit de 1 Qubit aplicando uma porta $R_y(\theta)$.
-3. Roda o circuito no simulador *Aer*.
-4. Calcula a Energia Total via Hamiltoniano.
-5. Salva a energia na propriedade `fitness` da célula de forma silenciosa.
+**Script Objective:**
+To validate the integration between the evolutionary data structure (LatticeCell), the physical evaluator (Hamiltonian), and the minimization algorithm (Hill Climbing). The code proves that the system can train a "blind" Qubit to find the *Ground State* autonomously.
 
 ---
 
-## 4. Algoritmo Evolutivo: Escalada de Colina (`hill_climbing_single_cell`)
-Esta é a IA que minimiza o custo energético iterativamente. 
+## 1. The Biological Structure (`LatticeCell`)
+* **What it is:** The fundamental blueprint of an individual in our evolutionary ecosystem.
+* **Function:** It stores the "DNA" of our LED, specifically the quantum rotation angle in the `theta` variable. It has the `fitness` property, which receives the physics evaluation.
 
-**O Ciclo de Vida (Gerações):**
-1. **Ponto de Partida:** A célula recebe um ângulo `theta` completamente aleatório (Indivíduo cego).
-2. **Mutação:** O algoritmo soma um ruído gaussiano (ex: $\pm 0.3$ radianos) ao ângulo atual.
-3. **Avaliação:** O Hamiltoniano roda o circuito mutado e devolve a nova energia.
-4. **Seleção Natural:**
-   * **ACCEPTED (Melhorou):** Se a nova energia for menor (mais próxima de $-1.00$), a mutação é aceita e o DNA da célula é atualizado.
-   * **REJECTED (Piorou):** Se a energia aumentou, o algoritmo desfaz a mutação e a célula retorna ao estado anterior seguro.
+## 2. The Physical Evaluator (Hamiltonian)
+* **What it is:** The classical cost function mapped to the quantum environment.
+* **Function:** We define a base Hamiltonian ($H = 1.0 \times Z_0$). The functions calculate the **Expectation Value** of the circuit. High energies represent "fines" (poor fitness), while low energies represent "savings" (good fitness).
 
-## Conclusão Experimental
-O terminal demonstrou que, não importa quão ruim seja o ângulo aleatório inicial (Geração 0), o algoritmo sempre rejeita caminhos de alta energia e converge perfeitamente para $\theta \approx 3.1415$ ($\pi$). Isso ancora o Qubit no polo sul da Esfera de Bloch ($|1\rangle$), atingindo com sucesso a energia mínima exata do sistema ($-1.0000$), validando a inteligência central do nosso modelo de Otimização Quântica.
+## 3. The Integration Engine (`evaluate_cell_fitness`)
+A function that connects the biological and physical worlds:
+1. Extracts the `theta` from the cell.
+2. Creates a 1-Qubit Qiskit circuit by applying an $R_y(\theta)$ gate.
+3. Runs the circuit on the *Aer* simulator.
+4. Calculates the Total Energy via the Hamiltonian.
+5. Saves the energy to the cell's `fitness` property silently.
+
+---
+
+## 4. Evolutionary Algorithm: Hill Climbing (`hill_climbing_single_cell`)
+This is the AI that iteratively minimizes the energy cost.
+
+**The Life Cycle (Generations):**
+1. **Starting Point:** The cell receives a completely random `theta` angle (Blind individual).
+2. **Mutation:** The algorithm adds a Gaussian noise (e.g., $\pm 0.3$ radians) to the current angle.
+3. **Evaluation:** The Hamiltonian runs the mutated circuit and returns the new energy.
+4. **Natural Selection:**
+   * **ACCEPTED (Improved):** If the new energy is lower (closer to $-1.00$), the mutation is accepted, and the cell's DNA is updated.
+   * **REJECTED (Worsened):** If the energy increased, the algorithm undoes the mutation, and the cell returns to its previous safe state.
+
+## Experimental Conclusion
+The terminal demonstrated that no matter how bad the initial random angle is (Generation 0), the algorithm always rejects high-energy paths and converges perfectly to $\theta \approx 3.1415$ ($\pi$). This anchors the Qubit at the south pole of the Bloch Sphere ($|1\rangle$), successfully achieving the system's exact minimum energy ($-1.0000$), validating the core intelligence of our Quantum Optimization model.
