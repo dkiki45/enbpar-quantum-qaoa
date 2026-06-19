@@ -120,7 +120,7 @@ with pd.ExcelWriter(nome_arquivo, engine='openpyxl') as writer:
     
     # 3.2. Aba de Resultados Empilhados
     nome_aba_resultados = "Resultados_Gerais"
-    linha_atual = 0 # O controle de onde o código vai escrever
+    linha_atual = 0 
     
     for nome_aba, qc in circuitos_dict.items():
         print(f"Processando {nome_aba}...")
@@ -138,16 +138,8 @@ with pd.ExcelWriter(nome_arquivo, engine='openpyxl') as writer:
         df.index = ["<H> (Energia Total)"]
         df['Média'] = df.mean(axis=1)
         df['Desvio Padrão'] = df.std(axis=1)
-        
-        # 1. Escreve o Título do Circuito
         df_titulo = pd.DataFrame([[f"=== {nome_aba} ==="]])
         df_titulo.to_excel(writer, sheet_name=nome_aba_resultados, startrow=linha_atual, index=False, header=False)
-        linha_atual += 1 # Pula 1 linha
-        
-        # 2. Escreve a Tabela de Dados logo abaixo
+        linha_atual += 1 
         df.to_excel(writer, sheet_name=nome_aba_resultados, startrow=linha_atual)
-        
-        # Pula as linhas da tabela + 3 linhas em branco de respiro para o próximo circuito
         linha_atual += len(df.index) + 3 
-
-print(f"\n🎉 SUCESSO! Abra o Excel e veja tudo organizado na aba 'Resultados_Gerais'.")
