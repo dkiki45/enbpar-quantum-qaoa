@@ -1,30 +1,30 @@
-# Documentação Técnica: Evolução de Rede Lattice (Lattice Network Evolution)
+# Technical Documentation: Lattice Network Evolution
 
-**Objetivo do Script:**
-Escalar o algoritmo de minimização quântica de um único indivíduo para uma rede interconectada (Lattice 2D). O código prova que o algoritmo *Hill Climbing* consegue otimizar a Energia Global de um sistema de múltiplos Qubits simultaneamente, encontrando o *Ground State* da rede.
-
----
-
-## 1. A Estrutura de Rede (`QuantumLattice2D`)
-* **O que é:** O "mapa" ou tabuleiro que organiza as células (`LatticeCell`) em coordenadas geográficas (linhas e colunas).
-* **Função:** Neste experimento, instanciamos uma grade 2x2 (representando 4 postes de luz). A classe mapeia as coordenadas físicas (ex: linha 0, coluna 1) para os índices lógicos dos Qubits no Qiskit (ex: Qubit 1).
-* **Visualização (`print_classical_state`):** Converte os estados quânticos contínuos (ângulos $\theta$) em estados clássicos discretos ($0$ ou $1$) e imprime uma matriz visual representando quais LEDs estão ligados ou desligados.
-
-## 2. O Hamiltoniano Global (Avaliação da Cidade)
-* **O que muda:** Em vez de avaliar apenas um Qubit, o Hamiltoniano agora é uma soma das energias de todos os indivíduos da malha. 
-* **Equação do Teste:** $H = 1.0 \times Z_0 + 1.0 \times Z_1 + 1.0 \times Z_2 + 1.0 \times Z_3$.
-* **Alvo (Ground State):** Como cada porta Z tem um mínimo de $-1.00$, o estado fundamental perfeito para esta rede de 4 postes é uma Energia Global exata de **$-4.0000$**.
-
-## 3. Algoritmo Evolutivo em Rede (`hill_climbing_lattice`)
-A dinâmica de evolução agora opera sobre a comunidade, não apenas sobre o indivíduo:
-1. **Seleção Aleatória:** A cada geração, a IA sorteia um "poste" (uma célula) qualquer do mapa para sofrer mutação.
-2. **Mutação Local:** Aplica-se um ruído gaussiano apenas no ângulo daquela célula escolhida.
-3. **Avaliação Global:** O circuito inteiro (4 Qubits) é construído. O Hamiltoniano roda e avalia se a energia *da cidade inteira* melhorou.
-4. **Decisão:**
-   * Se a alteração naquele poste específico diminuiu o custo total da rede, a mutação é **ACEITA**.
-   * Se a alteração piorou o custo total, a mutação é **REJEITADA** e o poste volta ao estado anterior.
+**Script Objective:**
+To scale the single-individual quantum minimization algorithm to an interconnected network (2D Lattice). The code proves that the *Hill Climbing* algorithm can optimize the Global Energy of a multiple-Qubit system simultaneously, finding the network's *Ground State*.
 
 ---
 
-## Conclusão Experimental
-O algoritmo demonstrou capacidade de coordenar múltiplos Qubits simultaneamente. Começando com uma matriz caótica de ângulos aleatórios (energia distante do ideal), a seleção natural iterativa guiou o sistema até a configuração perfeita. Ao final das gerações, a energia global cravou em `-4.0000` e a matriz de LEDs colapsou para o estado clássico ideal, provando a escalabilidade do modelo de otimização combinatória.
+## 1. The Network Structure (`QuantumLattice2D`)
+* **What it is:** The "map" or board that organizes the cells (`LatticeCell`) into geographical coordinates (rows and columns).
+* **Function:** In this experiment, we instantiated a 2x2 grid (representing 4 streetlights). The class maps physical coordinates (e.g., row 0, column 1) to the logical Qubit indices in Qiskit (e.g., Qubit 1).
+* **Visualization (`print_classical_state`):** Converts continuous quantum states ($\theta$ angles) into discrete classical states ($0$ or $1$) and prints a visual matrix representing which LEDs are turned on or off.
+
+## 2. The Global Hamiltonian (City Evaluation)
+* **What changes:** Instead of evaluating just one Qubit, the Hamiltonian is now a sum of the energies of all individuals in the grid.
+* **Test Equation:** $H = 1.0 \times Z_0 + 1.0 \times Z_1 + 1.0 \times Z_2 + 1.0 \times Z_3$.
+* **Target (Ground State):** Since each Z gate has a minimum of $-1.00$, the perfect ground state for this 4-light network is an exact Global Energy of **$-4.0000$**.
+
+## 3. Network Evolutionary Algorithm (`hill_climbing_lattice`)
+The evolutionary dynamics now operate on the community, not just the individual:
+1. **Random Selection:** At each generation, the AI randomly selects any "streetlight" (a cell) on the map to undergo mutation.
+2. **Local Mutation:** A Gaussian noise is applied only to the angle of that chosen cell.
+3. **Global Evaluation:** The entire circuit (4 Qubits) is built. The Hamiltonian runs and evaluates if the energy of the *entire city* has improved.
+4. **Decision:**
+   * If the change in that specific streetlight decreased the total cost of the network, the mutation is **ACCEPTED**.
+   * If the change worsened the total cost, the mutation is **REJECTED**, and the streetlight returns to its previous state.
+
+---
+
+## Experimental Conclusion
+The algorithm demonstrated the ability to coordinate multiple Qubits simultaneously. Starting with a chaotic matrix of random angles (energy far from ideal), iterative natural selection guided the system to the perfect configuration. At the end of the generations, the global energy locked at `-4.0000`, and the LED matrix collapsed to the ideal classical state, proving the scalability of the combinatorial optimization model.
