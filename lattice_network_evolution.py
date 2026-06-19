@@ -146,7 +146,6 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
 if __name__ == "__main__":
     sim = AerSimulator()
     
-    # 1. Create a 2x2 grid (4 LEDs total)
     my_city_grid = QuantumLattice2D(rows=3, cols=3)
     
     # 2. Define the Global Hamiltonian (We want all 4 to reach minimum energy)
