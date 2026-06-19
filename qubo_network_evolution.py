@@ -123,6 +123,8 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
             print(f"Gen {gen:03d} | Mutated Qubit {target_cell.qubit_index} | Energy: {new_energy:+.4f} | ACCEPTED")
         else:
             target_cell.theta = old_theta
+            print(f"Gen {gen:02d} | Mutated Qubit {target_cell.qubit_index} | Energy: {new_energy:+.4f} | REJECTED")
+
             
     print("\n--- EVOLUTION FINISHED ---")
     print(f"Final Minimum Energy (Ground State): {best_energy:.4f}")
