@@ -31,3 +31,7 @@ The project was built in a modular approach. Below are the links to the detailed
 * **Technical Documentation:** [📄 Read doc_qubo_evolution.md](doc_qubo_ev.md)
 * **Summary:** Upgrades the model to a Quadratic Unconstrained Binary Optimization (QUBO) architecture. Introduces coupled penalty terms ($Z_iZ_j$) for adjacent LEDs, creating spatial frustration. Demonstrates the algorithm's capability to balance linear rewards with quadratic penalties to resolve spatial conflicts and find complex distribution patterns.
 
+### 5. Urban Infrastructure Mapping: Real vs. Simulated Topologies
+* **Source Code:** `real_graph_qubo.py` and `simulated_graph_qubo.py`
+* **Technical Documentation:** [📄 Read RESULTS_AND_METHODOLOGY.md](RESULTS_AND_METHODOLOGY.md)
+* **Summary:** Bridges the gap between theoretical physics and real-world urban planning. It extracts real geographical coordinates from the IPPUC (GeoCuritiba) dataset and uses the Haversine formula to map the local neighborhood graph of streetlights. To scientifically validate the quantum model, it also generates an artificial control graph (Euclidean distance). Both scripts generate the precise QUBO Hamiltonian constraints ($Z_i$ and $Z_iZ_j$) required to format the problem for QAOA execution on IBM Quantum hardware.
