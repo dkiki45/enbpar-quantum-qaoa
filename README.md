@@ -35,3 +35,8 @@ The project was built in a modular approach. Below are the links to the detailed
 * **Source Code:** `real_graph_qubo.py` and `simulated_graph_qubo.py`
 * **Technical Documentation:** [📄 Read RESULTS_AND_METHODOLOGY.md](RESULTS_AND_METHODOLOGY.md)
 * **Summary:** Bridges the gap between theoretical physics and real-world urban planning. It extracts real geographical coordinates from the IPPUC (GeoCuritiba) dataset and uses the Haversine formula to map the local neighborhood graph of streetlights. To scientifically validate the quantum model, it also generates an artificial control graph (Euclidean distance). Both scripts generate the precise QUBO Hamiltonian constraints ($Z_i$ and $Z_iZ_j$) required to format the problem for QAOA execution on IBM Quantum hardware.
+
+**Real-World Data Extraction (Prado Velho / PUCPR):**
+
+![Mapa dos postes no Prado Velho](assets/mapa_prado_velho.png)
+*Fonte: [Portal Paraná Interativo - Governo do Estado do Paraná](https://paranainterativo.pr.gov.br/portal/apps/webappviewer/index.html?id=f282d1c181c0405789e2f65c17ac274d)*
