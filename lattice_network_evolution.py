@@ -78,6 +78,15 @@ def hamiltonian_expectation_z_only_from_counts(counts: Dict[str, int], terms: Li
         total += term.coefficient * exp_val
     return total
 
+def build_z_terms_for_lattice(lattice: "QuantumLattice2D", coefficient: float = 1.0) -> List[HamiltonianTerm]:
+    terms = []
+    for row in range(lattice.rows):
+        for col in range(lattice.cols):
+            cell = lattice.cells[row, col]
+            if cell.occupied:
+                terms.append(HamiltonianTerm(coefficient, "Z", (cell.qubit_index,)))
+    return terms
+
 # ============================================================
 # 3. EVALUATION ENGINE (Global Energy)
 # ============================================================
@@ -148,15 +157,10 @@ if __name__ == "__main__":
     
     my_city_grid = QuantumLattice2D(rows=3, cols=3)
     
-    # 2. Define the Global Hamiltonian (We want all 4 to reach minimum energy)
-    # H = Z_0 + Z_1 + Z_2 + Z_3
-    terms = [
-        HamiltonianTerm(1.0, "Z", (0,)),
-        HamiltonianTerm(1.0, "Z", (1,)),
-        HamiltonianTerm(1.0, "Z", (2,)),
-        HamiltonianTerm(1.0, "Z", (3,))
-    ]
-    
+    # 2. Define the Global Hamiltonian
+    # H = sum_i Z_i, i = 0..n_qubits-1
+    terms = build_z_terms_for_lattice(my_city_grid, coefficient=1.0)
+
     # 3. Run Evolution
     # Expected Ground State Energy for 4 independent terms is -4.00
     hill_climbing_lattice(my_city_grid, sim, terms, generations=150, mutation_rate=0.4)
