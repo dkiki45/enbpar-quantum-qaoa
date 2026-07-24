@@ -93,10 +93,10 @@ class QuantumLattice2D:
     '''
 
     def set_value(self, row: int, col: int, value: int):
-        self.values[row, col] = value
+        self.cells[row, col].value = value
 
     def get_value(self, row: int, col: int) -> int:
-        return int(self.values[row, col])
+        return int(self.cells[row, col].value)
     
     
     def print_occupancy(self):
