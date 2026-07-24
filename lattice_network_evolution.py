@@ -1,8 +1,16 @@
+import random
 import numpy as np
 from dataclasses import dataclass
 from typing import Optional, List, Tuple, Dict
 from qiskit import QuantumCircuit, transpile
 from qiskit_aer import AerSimulator
+
+def set_reproducible_seed(seed: Optional[int] = None) -> int:
+    if seed is None:
+        seed = int(np.random.SeedSequence().entropy % (2**32 - 1))
+    random.seed(seed)
+    np.random.seed(seed)
+    return seed
 
 # ============================================================
 # 1. LATTICE STRUCTURE (The Neighborhood)
@@ -153,7 +161,9 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
 # 5. MAIN EXECUTION
 # ============================================================
 if __name__ == "__main__":
+    experiment_seed = set_reproducible_seed() # initialization/mutation
     sim = AerSimulator()
+    sim.set_options(seed_simulator=experiment_seed)  # statistical noise of the shots
     
     my_city_grid = QuantumLattice2D(rows=3, cols=3)
     
