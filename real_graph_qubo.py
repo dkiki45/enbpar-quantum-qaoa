@@ -36,46 +36,54 @@ def calculate_distance_meters(lat1, lon1, lat2, lon2):
     return R * c
 
 # ============================================================
-# 2. DATA PREPARATION (The 150 Qubit Cut)
+# 2. INTEGRATION FUNCTION (Exporting to the Pipeline)
 # ============================================================
-print("\n--- STARTING QUBO MAPPING (PRADO VELHO) ---")
+def get_real_qubo_terms(csv_path='paranainterativo.csv', limit=150, threshold=45.0):
+    """
+    Reads real data, builds the neighborhood graph, and returns the QUBO terms.
+    This allows other files (like the quantum simulation) to import the data.
+    """
+    print(f"\n--- EXTRACTING REAL DATA ({limit} streetlights) ---")
+    
+    try:
+        df = pd.read_csv(csv_path)
+    except FileNotFoundError:
+        print(f"ERROR: File {csv_path} not found in the folder.")
+        return []
 
-# Loads the CSV and selects only the first 150 streetlights
-df = pd.read_csv('paranainterativo.csv')
-df_ibm = df.head(150).copy()
-print(f"Successfully loaded streetlights: {len(df_ibm)}")
+    # Former "Data Preparation" section
+    df_ibm = df.head(limit).copy()
+    coords = df_ibm[['latitude', 'longitude']].values
+    
+    # Former "Graph Construction" section
+    edges = []
+    for i in range(len(coords)):
+        for j in range(i + 1, len(coords)):
+            dist = calculate_distance_meters(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
+            if dist < threshold:
+                edges.append((i, j))
+                
+    # QUBO Generation
+    qubo_terms = []
+    # LINEAR TERMS (Z_i)
+    for i in range(len(coords)):
+        qubo_terms.append({"coefficient": 1.0, "pauli": "Z", "qubits": (i,)})
+
+    # QUADRATIC TERMS (Z_i * Z_j)
+    for edge in edges:
+        qubo_terms.append({"coefficient": 2.0, "pauli": "ZZ", "qubits": edge})
+        
+    return qubo_terms
 
 # ============================================================
-# 3. GRAPH CONSTRUCTION (Mapping Neighbors)
+# 3. STANDALONE EXECUTION (If running this file directly)
 # ============================================================
-# If the distance between streetlights is less than 45 meters, they are neighbors (edges)
-DISTANCE_THRESHOLD = 45.0 
-edges = []
-coords = df_ibm[['latitude', 'longitude']].values
-
-# Compares each streetlight with all others to find neighbors
-for i in range(len(coords)):
-    for j in range(i + 1, len(coords)):
-        dist = calculate_distance_meters(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
-        if dist < DISTANCE_THRESHOLD:
-            edges.append((i, j))
-
-print(f"Connections (streets/edges) found: {len(edges)}")
-
-# ============================================================
-# 4. GENERATING THE QUBO HAMILTONIAN FOR IBM
-# ============================================================
-qubo_terms = []
-
-# 4.1. LINEAR TERMS: Reward for turning the streetlight on (Z_i)
-for i in range(len(coords)):
-    qubo_terms.append({"coefficient": 1.0, "pauli": "Z", "qubits": (i,)})
-
-# 4.2. QUADRATIC TERMS: Penalty for turning two neighbors on together (Z_i * Z_j)
-for edge in edges:
-    qubo_terms.append({"coefficient": 2.0, "pauli": "ZZ", "qubits": edge})
-
-print(f"\nTotal mathematical constraints generated: {len(qubo_terms)}")
-print("\nExample of the first 5 spatial conflict rules (Penalties):")
-for t in qubo_terms[150:155]: 
-    print(f"-> Penalty generated between Qubit {t['qubits'][0]} and Qubit {t['qubits'][1]}")
+if __name__ == "__main__":
+    # Tests the extraction in isolation to ensure it is working
+    terms = get_real_qubo_terms()
+    print(f"\nTotal mathematical constraints generated: {len(terms)}")
+    
+    if len(terms) > 150:
+        print("\nExample of the first 5 spatial conflict rules (Penalties):")
+        for t in terms[150:155]: 
+            print(f"-> Penalty between Qubit {t['qubits'][0]} and Qubit {t['qubits'][1]}")
