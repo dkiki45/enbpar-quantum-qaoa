@@ -222,24 +222,49 @@ if __name__ == "__main__":
     # Imports the function from the real_graph_qubo.py file
     from real_graph_qubo import get_real_qubo_terms 
     
-    experiment_seed = set_reproducible_seed(42)
+    experiment_seed = set_reproducible_seed(1)
     print(f"Experiment Seed: {experiment_seed}")
 
     sim = AerSimulator()
     sim.set_options(seed_simulator=experiment_seed)
+
+    N_STREETLIGHTS = 3
+
+    # =====================================================================
+    # SCIENTIFIC NOTE ON SCALABILITY, ENTANGLEMENT, AND QAOA
+    # =====================================================================
+    # Currently (in the Hill Climbing phase), the circuit evaluates states 
+    # through independent rotations (RY) without entanglement. This would 
+    # theoretically allow the use of Tensor Network-based simulators 
+    # (e.g., method='matrix_product_state') to bypass hardware limits and 
+    # run 150 qubits locally.
+    # 
+    # HOWEVER, we opted to strictly limit the local simulation to 20 qubits.
+    # Reason: The next architectural phase of the project (QAOA) will 
+    # introduce dense entanglement (CX/ZZ gates). When this happens, the 
+    # state space complexity will revert to 2^N, making 150 qubits 
+    # computationally intractable for any classical RAM. Limiting it to 
+    # 20 qubits ensures a classical testing environment that accurately 
+    # reflects the physical memory limitations that QAOA will demand, 
+    # thus preserving the integrity of our baseline benchmark.
     
     print("\n[PIPELINE] 1. Extracting real topology from IPPUC (Prado Velho)...")
     # Pulls the real data directly from the CSV processed by the Haversine formula
-    raw_qubo_terms = get_real_qubo_terms(limit=150)
+    raw_qubo_terms = get_real_qubo_terms(limit=N_STREETLIGHTS)
     
     if not raw_qubo_terms:
         print("Pipeline aborted: Failed to extract QUBO terms.")
         exit()
+
+    n_qubits_real = len({q for term in raw_qubo_terms if len(term["qubits"]) == 1 for q in term["qubits"]})
+    if n_qubits_real != N_STREETLIGHTS:
+        print(f"[WARNING] N_STREETLIGHTS={N_STREETLIGHTS} but data returned "
+              f"{n_qubits_real} fixtures (linear terms). Using {n_qubits_real}.")
     
-    print("\n[PIPELINE] 2. Mapping 150 real streetlights to the Qiskit Lattice...")
+    print(f"\n[PIPELINE] 2. Mapping real streetlights to the Qiskit Lattice...")
     # Since the positions are now dictated by GPS (real distance),
     # the visual grid doesn't need to be square. We create 1 straight row of 150 cells.
-    prado_velho_grid = QuantumLattice2D(rows=1, cols=150)
+    prado_velho_grid = QuantumLattice2D(rows=3, cols=n_qubits_real)
     
     print("\n[PIPELINE] 3. Converting dictionary rules to HamiltonianTerm objects...")
     h_terms_real = []
@@ -262,5 +287,5 @@ if __name__ == "__main__":
         h_terms=h_terms_real, 
         generations=300, # Increased to give the algorithm time to explore 150 variables
         mutation_rate=0.4,
-        experiment_name="prado_velho_150_leds"
+        experiment_name=f"prado_velho_{n_qubits_real}_leds"
     )
