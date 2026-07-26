@@ -124,20 +124,28 @@ def evaluate_lattice_energy(lattice: QuantumLattice2D, simulator: AerSimulator, 
 # ============================================================
 # 4. EVOLUTIONARY ALGORITHM (Network Hill Climbing)
 # ============================================================
-def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_terms: List[HamiltonianTerm], generations: int = 100, mutation_rate: float = 0.3, experiment_name: str = "experiment"):
+def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_terms: List[HamiltonianTerm], generations: int = 100, mutation_rate: float = 0.3, experiment_name: str = "experiment", qubo_offset: float = 0.0):
+    """
+    qubo_offset: constant returned by qubo_to_ising(). The Ising
+    energy (<H>) by itself is NOT equal to the original classical C(x) --
+    it equals C(x) - offset. We add the offset back only for reporting
+    purposes (the search/acceptance step keeps using the Ising energy,
+    since a constant shift doesn't change where the minimum sits).
+    """
     print("\n--- STARTING LATTICE EVOLUTION ---")
     
     history_log = []
     start_time = time.time()
-
+ 
     # 1. Initial Evaluation
     best_energy = evaluate_lattice_energy(lattice, simulator, h_terms)
-    print(f"Gen 00 [START] | Global Energy: {best_energy:.4f}")
-
+    print(f"Gen 00 [START] | Global Energy (Ising): {best_energy:.4f} | Equivalent C(x): {best_energy + qubo_offset:.4f}")
+ 
     history_log.append({
         "generation": 0,
         "qubit_mutated": "N/A",
         "energy": round(best_energy, 4),
+        "objective_cx": round(best_energy + qubo_offset, 4),
         "status": "START", 
         "time_elapsed_sec": 0.0
     })
@@ -167,17 +175,18 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
             target_cell.theta = old_theta
             status = "REJECTED"
             print(f"Gen {gen:02d} | Mutated Qubit {target_cell.qubit_index} | Energy: {new_energy:+.4f} | REJECTED")
-
+ 
         history_log.append({
             "generation": gen,
             "qubit_mutated": target_cell.qubit_index,
             "energy": round(best_energy, 4),
+            "objective_cx": round(best_energy + qubo_offset, 4),
             "status": status,
             "time_elapsed_sec": round(time.time() - start_time, 4)
         })
             
     print("\n--- EVOLUTION FINISHED ---")
-
+ 
     # ==========================================
     # DATA PERSISTENCE
     # ==========================================
@@ -189,14 +198,15 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
     # Export CSV
     csv_filename = f"results/{experiment_name}_history_{timestamp}.csv"
     with open(csv_filename, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=["generation", "qubit_mutated", "energy", "status", "time_elapsed_sec"])
+        writer = csv.DictWriter(file, fieldnames=["generation", "qubit_mutated", "energy", "objective_cx", "status", "time_elapsed_sec"])
         writer.writeheader()
         writer.writerows(history_log)
     
     # Optimal Config Export (TXT)
     config_filename = f"results/{experiment_name}_optimal_config_{timestamp}.txt"
     with open(config_filename, 'w') as file:
-        file.write(f"Final Minimum Energy: {best_energy:.4f}\n")
+        file.write(f"Final Minimum Energy (Ising <H>): {best_energy:.4f}\n")
+        file.write(f"Final Objective C(x) (Ising + offset from Phase B): {best_energy + qubo_offset:.4f}\n")
         file.write("Final LED Grid Configuration (1 = ON, 0 = OFF):\n")
         
         # Extracts the classic matrix and saves it.
@@ -210,11 +220,12 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
             
     print(f"-> Histórico completo exportado para: {csv_filename}")
     print(f"-> Configuração ótima exportada para: {config_filename}")
-
-    print(f"Final Minimum Energy (Ground State): {best_energy:.4f}")
+ 
+    print(f"Final Minimum Energy (Ground State, Ising <H>): {best_energy:.4f}")
+    print(f"Final Objective C(x) (classical equivalent, with Phase B offset): {best_energy + qubo_offset:.4f}")
     print("Final LED Grid Configuration:")
     lattice.print_classical_state()
-
+ 
 # ============================================================
 # 5. MAIN EXECUTION
 # ============================================================
@@ -224,12 +235,12 @@ if __name__ == "__main__":
     
     experiment_seed = set_reproducible_seed(1)
     print(f"Experiment Seed: {experiment_seed}")
-
+ 
     sim = AerSimulator()
     sim.set_options(seed_simulator=experiment_seed)
-
+ 
     N_STREETLIGHTS = 3
-
+ 
     # =====================================================================
     # SCIENTIFIC NOTE ON SCALABILITY, ENTANGLEMENT, AND QAOA
     # =====================================================================
@@ -249,13 +260,16 @@ if __name__ == "__main__":
     # thus preserving the integrity of our baseline benchmark.
     
     print("\n[PIPELINE] 1. Extracting real topology from IPPUC (Prado Velho)...")
-    # Pulls the real data directly from the CSV processed by the Haversine formula
-    raw_qubo_terms = get_real_qubo_terms(limit=N_STREETLIGHTS)
-    
+    # Pulls the real data directly from the CSV processed by the Haversine formula.
+    # Get_real_qubo_terms() now formalizes C(x) = -alpha*sum(x_i) + beta*sum(x_i*x_j)
+    # explicitly and only then converts it to Ising (Z/ZZ) terms, so it returns the
+    # constant `qubo_offset` picked up by the x_i = (1-Z_i)/2 substitution alongside the terms.
+    raw_qubo_terms, qubo_offset = get_real_qubo_terms(limit=N_STREETLIGHTS)
+ 
     if not raw_qubo_terms:
         print("Pipeline aborted: Failed to extract QUBO terms.")
         exit()
-
+ 
     n_qubits_real = len({q for term in raw_qubo_terms if len(term["qubits"]) == 1 for q in term["qubits"]})
     if n_qubits_real != N_STREETLIGHTS:
         print(f"[WARNING] N_STREETLIGHTS={N_STREETLIGHTS} but data returned "
@@ -287,5 +301,6 @@ if __name__ == "__main__":
         h_terms=h_terms_real, 
         generations=300, # Increased to give the algorithm time to explore 150 variables
         mutation_rate=0.4,
-        experiment_name=f"prado_velho_{n_qubits_real}_leds"
+        experiment_name=f"prado_velho_{n_qubits_real}_leds",
+        qubo_offset=qubo_offset,
     )
