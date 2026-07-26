@@ -21,6 +21,8 @@ Unit (QPU) via the QAOA algorithm on IBM Quantum hardware.
 import pandas as pd
 import numpy as np
 
+from qubo_formalization import build_qubo, qubo_to_ising, ALPHA_COVERAGE, BETA_REDUNDANCY
+
 # ============================================================
 # 1. MATHEMATICAL ENGINE: DISTANCE CALCULATION (HAVERSINE)
 # ============================================================
@@ -38,23 +40,44 @@ def calculate_distance_meters(lat1, lon1, lat2, lon2):
 # ============================================================
 # 2. INTEGRATION FUNCTION (Exporting to the Pipeline)
 # ============================================================
-def get_real_qubo_terms(csv_path='paranainterativo.csv', limit=150, threshold=45.0):
+def get_real_qubo_terms(
+    csv_path='paranainterativo.csv',
+    limit=150,
+    threshold=45.0,
+    alpha=ALPHA_COVERAGE,
+    beta=BETA_REDUNDANCY,
+):
     """
-    Reads real data, builds the neighborhood graph, and returns the QUBO terms.
-    This allows other files (like the quantum simulation) to import the data.
+    Reads real data, builds the neighborhood graph, and returns the Ising
+    terms derived from the formalized QUBO objective (Fase B):
+ 
+        C(x) = -alpha * sum_i x_i + beta * sum_{(i,j) in E} x_i * x_j
+ 
+    where x_i = 1 means streetlight i is ON. The QUBO is built explicitly
+    (see qubo_formalization.build_qubo) and only then converted to Ising
+    (Z / ZZ Pauli terms) via qubo_formalization.qubo_to_ising, instead of
+    writing Z/ZZ coefficients by hand as before.
+ 
+    Returns:
+        qubo_terms: list of dicts {"coefficient", "pauli", "qubits"} -
+                    same shape consumed by the rest of the pipeline.
+        offset:     constant term picked up by the x_i -> Z_i substitution.
+                    It doesn't change WHERE the minimum is, but it does
+                    change the reported numeric value of the energy, so
+                    callers that want the true C(x) value must add it back.
     """
     print(f"\n--- EXTRACTING REAL DATA ({limit} streetlights) ---")
-    
+ 
     try:
         df = pd.read_csv(csv_path)
     except FileNotFoundError:
         print(f"ERROR: File {csv_path} not found in the folder.")
-        return []
-
+        return [], 0.0
+ 
     # Former "Data Preparation" section
     df_ibm = df.head(limit).copy()
     coords = df_ibm[['latitude', 'longitude']].values
-    
+ 
     # Former "Graph Construction" section
     edges = []
     for i in range(len(coords)):
@@ -62,28 +85,29 @@ def get_real_qubo_terms(csv_path='paranainterativo.csv', limit=150, threshold=45
             dist = calculate_distance_meters(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
             if dist < threshold:
                 edges.append((i, j))
-                
-    # QUBO Generation
-    qubo_terms = []
-    # LINEAR TERMS (Z_i)
-    for i in range(len(coords)):
-        qubo_terms.append({"coefficient": 1.0, "pauli": "Z", "qubits": (i,)})
-
-    # QUADRATIC TERMS (Z_i * Z_j)
-    for edge in edges:
-        qubo_terms.append({"coefficient": 2.0, "pauli": "ZZ", "qubits": edge})
-        
-    return qubo_terms
-
+ 
+    # Formulate the QUBO first, then convert it to Ising.
+    linear, quadratic, offset0 = build_qubo(n_vars=len(coords), edges=edges, alpha=alpha, beta=beta)
+    ising_terms, offset = qubo_to_ising(linear, quadratic, offset0)
+ 
+    qubo_terms = [
+        {"coefficient": t.coefficient, "pauli": t.pauli, "qubits": t.qubits}
+        for t in ising_terms
+    ]
+ 
+    return qubo_terms, offset
+ 
 # ============================================================
 # 3. STANDALONE EXECUTION (If running this file directly)
 # ============================================================
 if __name__ == "__main__":
     # Tests the extraction in isolation to ensure it is working
-    terms = get_real_qubo_terms()
+    terms, offset = get_real_qubo_terms()
     print(f"\nTotal mathematical constraints generated: {len(terms)}")
-    
-    if len(terms) > 150:
+    print(f"Constant offset (from x_i = (1-Z_i)/2 substitution): {offset:+.4f}")
+ 
+    zz_terms = [t for t in terms if t["pauli"] == "ZZ"]
+    if zz_terms:
         print("\nExample of the first 5 spatial conflict rules (Penalties):")
-        for t in terms[150:155]: 
-            print(f"-> Penalty between Qubit {t['qubits'][0]} and Qubit {t['qubits'][1]}")
+        for t in zz_terms[:5]:
+            print(f"-> Penalty between Qubit {t['qubits'][0]} and Qubit {t['qubits'][1]} (J={t['coefficient']:+.4f})")
