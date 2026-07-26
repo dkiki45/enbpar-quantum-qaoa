@@ -14,6 +14,24 @@ import numpy as np
 # ============================================================
 @dataclass
 class HamiltonianTerm:
+    """
+    Represents an Ising Hamiltonian term: coefficient * Pauli(qubits).
+
+    Coefficient documentation:
+    Each HamiltonianTerm(coefficient=c, pauli="Z", qubits=(i,)) represents
+    c * Z_i, meaning the Pauli-Z operator acting on qubit i multiplied by c.
+    <Z_i> = +1 when qubit i collapses to |0> and -1 when it collapses to |1>.
+
+    In this script (hamiltonian.py), the 10 circuits are independent 
+    characterization experiments (they are not derived from a specific QUBO). 
+    Therefore, the coefficients for `termos_hamiltoniano` below are all set 
+    to 1.0 by design: the objective is to measure the total energy 
+    <H> = sum_i <Z_i> as a simple, equally weighted indicator of the global 
+    state of the 4 LEDs. They do not represent coverage/redundancy as they 
+    do in the real pipeline (see qubo_formalization.py and real_graph_qubo.py, 
+    where the coefficients ARE formally derived from alpha/beta via 
+    qubo_to_ising()).
+    """
     coefficient: float
     pauli: str
     qubits: Tuple[int, ...]
