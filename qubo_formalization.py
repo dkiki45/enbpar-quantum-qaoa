@@ -69,7 +69,7 @@ def build_qubo(
 
 
 # ============================================================
-# 2. QUBO -> ISING CONVERSION (the missing piece, section 5 of the report)
+# 2. QUBO -> ISING CONVERSION 
 # ============================================================
 def qubo_to_ising(
     linear: Dict[int, float],

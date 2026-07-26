@@ -222,7 +222,7 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
     print(f"-> Configuração ótima exportada para: {config_filename}")
  
     print(f"Final Minimum Energy (Ground State, Ising <H>): {best_energy:.4f}")
-    print(f"Final Objective C(x) (classical equivalent, with Phase B offset): {best_energy + qubo_offset:.4f}")
+    print(f"Final Objective C(x) (classical equivalent): {best_energy + qubo_offset:.4f}")
     print("Final LED Grid Configuration:")
     lattice.print_classical_state()
  
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     print(f"\n[PIPELINE] 2. Mapping real streetlights to the Qiskit Lattice...")
     # Since the positions are now dictated by GPS (real distance),
     # the visual grid doesn't need to be square. We create 1 straight row of 150 cells.
-    prado_velho_grid = QuantumLattice2D(rows=3, cols=n_qubits_real)
+    prado_velho_grid = QuantumLattice2D(rows=1, cols=n_qubits_real)
     
     print("\n[PIPELINE] 3. Converting dictionary rules to HamiltonianTerm objects...")
     h_terms_real = []

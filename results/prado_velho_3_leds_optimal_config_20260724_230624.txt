@@ -1,5 +1,0 @@
-Final Minimum Energy: -3.0000
-Final LED Grid Configuration (1 = ON, 0 = OFF):
-1 1 0
-1 0 0
-1 1 0
