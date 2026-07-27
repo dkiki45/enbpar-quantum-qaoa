@@ -1,0 +1,4 @@
+Final Minimum Energy (Ising <H>): -0.9978
+Final Objective C(x) (Ising + offset from Phase B): -1.9978
+Final LED Grid Configuration (1 = ON, 0 = OFF):
+1 1 0
