@@ -17,7 +17,7 @@ and Quadratic terms) to be sent and processed by a real Quantum Processing
 Unit (QPU) via the QAOA algorithm on IBM Quantum hardware.
 =============================================================================
 """
-
+import os
 import pandas as pd
 import numpy as np
 
@@ -41,7 +41,7 @@ def calculate_distance_meters(lat1, lon1, lat2, lon2):
 # 2. INTEGRATION FUNCTION (Exporting to the Pipeline)
 # ============================================================
 def get_real_qubo_terms(
-    csv_path='paranainterativo.csv',
+    csv_path=None,
     limit=150,
     threshold=45.0,
     alpha=ALPHA_COVERAGE,
@@ -49,7 +49,7 @@ def get_real_qubo_terms(
 ):
     """
     Reads real data, builds the neighborhood graph, and returns the Ising
-    terms derived from the formalized QUBO objective (Fase B):
+    terms derived from the formalized QUBO objective:
  
         C(x) = -alpha * sum_i x_i + beta * sum_{(i,j) in E} x_i * x_j
  
@@ -66,6 +66,12 @@ def get_real_qubo_terms(
                     change the reported numeric value of the energy, so
                     callers that want the true C(x) value must add it back.
     """
+
+    if csv_path is None:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        csv_path = os.path.join(base_dir, "data", "paranainterativo.csv")
+
+
     print(f"\n--- EXTRACTING REAL DATA ({limit} streetlights) ---")
  
     try:

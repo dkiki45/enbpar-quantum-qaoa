@@ -53,7 +53,8 @@ def plot_algorithmic_convergence(hc_csv_path: str, sa_csv_path: str, output_file
     
     # Saving the image to the results directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    base_dir = os.path.dirname(script_dir) 
+    results_dir = os.path.join(base_dir, "results")
     output_path = os.path.join(results_dir, output_filename)
     
     plt.savefig(output_path, dpi=300) # High resolution for the report
@@ -65,15 +66,16 @@ def plot_algorithmic_convergence(hc_csv_path: str, sa_csv_path: str, output_file
 if __name__ == "__main__":
     # Getting the current script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(script_dir)
     
     # =========================================================================
     # ATTENTION: Replace the filenames below with the exact files generated
     # during your tests (check your terminal history or results folder).
     # =========================================================================
-    ARQUIVO_HC = "prado_velho_3_leds_history_20260727_115724.csv"
-    ARQUIVO_SA = "prado_velho_3_leds_sa_history_20260727_115731.csv"
+    ARQUIVO_HC = "prado_velho_3_leds_history_20260727_130518.csv"
+    ARQUIVO_SA = "prado_velho_3_leds_sa_history_20260727_130525.csv"
     
-    caminho_hc = os.path.join(script_dir, "results", ARQUIVO_HC)
-    caminho_sa = os.path.join(script_dir, "results", ARQUIVO_SA)
+    caminho_hc = os.path.join(base_dir, "results", ARQUIVO_HC)
+    caminho_sa = os.path.join(base_dir, "results", ARQUIVO_SA)
     
     plot_algorithmic_convergence(caminho_hc, caminho_sa)

@@ -260,19 +260,20 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
     # DATA PERSISTENCE
     # ==========================================
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    base_dir = os.path.dirname(script_dir) 
+    results_dir = os.path.join(base_dir, "results")
     os.makedirs(results_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Export CSV
-    csv_filename = f"results/{experiment_name}_history_{timestamp}.csv"
+    csv_filename = os.path.join(results_dir, f"{experiment_name}_history_{timestamp}.csv")
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=["generation", "qubit_mutated", "energy", "objective_cx", "status", "time_elapsed_sec"])
         writer.writeheader()
         writer.writerows(history_log)
     
     # Optimal Config Export (TXT)
-    config_filename = f"results/{experiment_name}_optimal_config_{timestamp}.txt"
+    config_filename = os.path.join(results_dir, f"{experiment_name}_optimal_config_{timestamp}.txt")
     with open(config_filename, 'w') as file:
         file.write(f"Final Minimum Energy (Ising <H>): {best_energy:.4f}\n")
         file.write(f"Final Objective C(x): {best_energy + qubo_offset:.4f}\n")
@@ -446,17 +447,18 @@ def simulated_annealing_lattice(
     print("\n--- SIMULATED ANNEALING FINISHED ---")
  
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    results_dir = os.path.join(script_dir, "results")
+    base_dir = os.path.dirname(script_dir) 
+    results_dir = os.path.join(base_dir, "results")
     os.makedirs(results_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
  
-    csv_filename = f"results/{experiment_name}_history_{timestamp}.csv"
+    csv_filename = os.path.join(results_dir, f"{experiment_name}_history_{timestamp}.csv")
     with open(csv_filename, mode="w", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=["generation", "qubit_mutated", "energy", "objective_cx", "temperature", "status", "time_elapsed_sec"])
         writer.writeheader()
         writer.writerows(history_log)
  
-    config_filename = f"results/{experiment_name}_optimal_config_{timestamp}.txt"
+    config_filename = os.path.join(results_dir, f"{experiment_name}_optimal_config_{timestamp}.txt")
     with open(config_filename, "w") as file:
         file.write(f"Final Minimum Energy (Ising <H>): {best_energy:.4f}\n")
         file.write(f"Final Objective C(x): {best_energy + qubo_offset:.4f}\n")
@@ -484,7 +486,7 @@ if __name__ == "__main__":
     # Imports the function from the real_graph_qubo.py file
     from real_graph_qubo import get_real_qubo_terms 
     
-    experiment_seed = set_reproducible_seed(1)
+    experiment_seed = set_reproducible_seed(2)
     print(f"Experiment Seed: {experiment_seed}")
  
     sim = AerSimulator()

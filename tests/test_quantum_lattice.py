@@ -1,4 +1,8 @@
+import sys
+import os
 import unittest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 from quantum_lattice_2d_template import QuantumLattice2D, LatticeCell
 
 class TestQuantumLattice2D(unittest.TestCase):
