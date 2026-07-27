@@ -187,13 +187,13 @@ def validate_sampling_vs_statevector(lattice: QuantumLattice2D, simulator: AerSi
 # ============================================================
 def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_terms: List[HamiltonianTerm], generations: int = 100, mutation_rate: float = 0.3, experiment_name: str = "experiment", qubo_offset: float = 0.0, epsilon: float = 0.01):
     """
-    qubo_offset: constant returned by qubo_to_ising() (Phase B). The Ising
+    qubo_offset: constant returned by qubo_to_ising(). The Ising
     energy (<H>) by itself is NOT equal to the original classical C(x) --
     it equals C(x) - offset. We add the offset back only for reporting
     purposes (the search/acceptance step keeps using the Ising energy,
     since a constant shift doesn't change where the minimum sits).
  
-    epsilon: energy tolerance (Phase C, item 1). Energy is measured by
+    epsilon: energy tolerance. Energy is measured by
     shot sampling, so tiny improvements can be pure statistical noise
     rather than a real signal. We only accept a mutation when it beats
     the current best by more than epsilon: new_energy < best_energy - epsilon.
@@ -275,7 +275,7 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
     config_filename = f"results/{experiment_name}_optimal_config_{timestamp}.txt"
     with open(config_filename, 'w') as file:
         file.write(f"Final Minimum Energy (Ising <H>): {best_energy:.4f}\n")
-        file.write(f"Final Objective C(x) (Ising + offset from Phase B): {best_energy + qubo_offset:.4f}\n")
+        file.write(f"Final Objective C(x): {best_energy + qubo_offset:.4f}\n")
         file.write("Final LED Grid Configuration (1 = ON, 0 = OFF):\n")
         
         # Extracts the classic matrix and saves it.
@@ -291,7 +291,7 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
     print(f"-> Configuração ótima exportada para: {config_filename}")
  
     print(f"Final Minimum Energy (Ground State, Ising <H>): {best_energy:.4f}")
-    print(f"Final Objective C(x) (classical equivalent, with Phase B offset): {best_energy + qubo_offset:.4f}")
+    print(f"Final Objective C(x): {best_energy + qubo_offset:.4f}")
     print("Final LED Grid Configuration:")
     lattice.print_classical_state()
  
@@ -459,7 +459,7 @@ def simulated_annealing_lattice(
     config_filename = f"results/{experiment_name}_optimal_config_{timestamp}.txt"
     with open(config_filename, "w") as file:
         file.write(f"Final Minimum Energy (Ising <H>): {best_energy:.4f}\n")
-        file.write(f"Final Objective C(x) (Ising + offset from Phase B): {best_energy + qubo_offset:.4f}\n")
+        file.write(f"Final Objective C(x): {best_energy + qubo_offset:.4f}\n")
         file.write("Final LED Grid Configuration (1 = ON, 0 = OFF):\n")
         for i in range(lattice.rows):
             row_str = []
