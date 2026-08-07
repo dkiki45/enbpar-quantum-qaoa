@@ -43,7 +43,7 @@ def calculate_distance_meters(lat1, lon1, lat2, lon2):
 def get_real_qubo_terms(
     csv_path=None,
     limit=150,
-    led_radius_meters=20.0,
+    led_radius_meters=10.0,
     alpha=ALPHA_COVERAGE,
     beta=BETA_REDUNDANCY,
 ):

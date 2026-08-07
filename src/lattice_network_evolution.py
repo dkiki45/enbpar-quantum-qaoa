@@ -243,7 +243,6 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
             # Revert mutation if it didn't help the network
             target_cell.theta = old_theta
             status = "REJECTED"
-            print(f"Gen {gen:02d} | Mutated Qubit {target_cell.qubit_index} | Energy: {new_energy:+.4f} | REJECTED")
  
         history_log.append({
             "generation": gen,
@@ -558,7 +557,7 @@ if __name__ == "__main__":
         lattice=prado_velho_grid, 
         simulator=sim, 
         h_terms=h_terms_real, 
-        generations=100, 
+        generations=150, 
         mutation_rate=0.4,
         experiment_name=f"prado_velho_{n_qubits_real}_leds",
         qubo_offset=qubo_offset,
@@ -568,7 +567,7 @@ if __name__ == "__main__":
         lattice=prado_velho_grid_sa,
         simulator=sim,
         h_terms=h_terms_real,
-        generations=100,
+        generations=150,
         mutation_rate=0.4,
         experiment_name=f"prado_velho_{n_qubits_real}_leds_sa",
         qubo_offset=qubo_offset,

@@ -11,6 +11,15 @@ behavior of Hill Climbing and the thermal fluctuations of Simulated Annealing.
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import glob
+
+def get_latest_file(directory, pattern):
+    search_path = os.path.join(directory, pattern)
+    files = glob.glob(search_path)
+    if not files:
+        return None
+    files.sort(key=os.path.getmtime, reverse=True)
+    return files[0]
 
 def plot_algorithmic_convergence(hc_csv_path: str, sa_csv_path: str, output_filename: str = "convergence_analysis.png"):
     print(f"Reading Hill Climbing data: {os.path.basename(hc_csv_path)}")
@@ -64,18 +73,18 @@ def plot_algorithmic_convergence(hc_csv_path: str, sa_csv_path: str, output_file
     plt.show()
 
 if __name__ == "__main__":
-    # Getting the current script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.dirname(script_dir)
+    base_dir = os.path.dirname(script_dir) 
+    results_dir = os.path.join(base_dir, "results")
     
-    # =========================================================================
-    # ATTENTION: Replace the filenames below with the exact files generated
-    # during your tests (check your terminal history or results folder).
-    # =========================================================================
-    ARQUIVO_HC = "prado_velho_3_leds_history_20260727_130518.csv"
-    ARQUIVO_SA = "prado_velho_3_leds_sa_history_20260727_130525.csv"
+    hc_pattern = "*_leds_history_*.csv"
+    sa_pattern = "*_leds_sa_history_*.csv"
     
-    caminho_hc = os.path.join(base_dir, "results", ARQUIVO_HC)
-    caminho_sa = os.path.join(base_dir, "results", ARQUIVO_SA)
+    path_hc = get_latest_file(results_dir, hc_pattern)
+    path_sa = get_latest_file(results_dir, sa_pattern)
     
-    plot_algorithmic_convergence(caminho_hc, caminho_sa)
+    if not path_hc or not path_sa:
+        print("\n[ERROR] Could not find the CSV files in the 'results/' folder.")
+        print("Make sure to run 'lattice_network_evolution.py' first.")
+    else:
+        plot_algorithmic_convergence(path_hc, path_sa)

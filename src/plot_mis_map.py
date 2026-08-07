@@ -120,4 +120,4 @@ def plot_geographic_mis(led_radius_meters=20.0):
 
 if __name__ == "__main__":
     # Ensure this matches the radius used in real_graph_qubo.py
-    plot_geographic_mis(led_radius_meters=20.0)
+    plot_geographic_mis(led_radius_meters=10.0)
