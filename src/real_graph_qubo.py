@@ -43,7 +43,7 @@ def calculate_distance_meters(lat1, lon1, lat2, lon2):
 def get_real_qubo_terms(
     csv_path=None,
     limit=150,
-    threshold=45.0,
+    led_radius_meters=20.0,
     alpha=ALPHA_COVERAGE,
     beta=BETA_REDUNDANCY,
 ):
@@ -73,6 +73,7 @@ def get_real_qubo_terms(
 
 
     print(f"\n--- EXTRACTING REAL DATA ({limit} streetlights) ---")
+    print(f"-> Energy Efficiency Mode: LEDs have a {led_radius_meters}m radius.")
  
     try:
         df = pd.read_csv(csv_path)
@@ -86,10 +87,12 @@ def get_real_qubo_terms(
  
     # Former "Graph Construction" section
     edges = []
+    overlap_threshold = 2 * led_radius_meters
+
     for i in range(len(coords)):
         for j in range(i + 1, len(coords)):
             dist = calculate_distance_meters(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
-            if dist < threshold:
+            if dist < overlap_threshold:
                 edges.append((i, j))
  
     # Formulate the QUBO first, then convert it to Ising.
