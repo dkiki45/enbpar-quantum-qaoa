@@ -22,19 +22,10 @@ def simulated_annealing_lattice(
     min_temperature: float = 0.01,
 ):
     """
-    Difference from Hill Climbing: instead of only accepting strict
-    improvements, SA also accepts WORSE mutations with probability
-    exp(-delta_E / T), where delta_E = new_energy - current_energy > 0 and
-    T is the current temperature. This lets the search escape local minima
-    early on (when T is high) while behaving more and more like greedy
-    Hill Climbing as T cools down.
- 
-    Defaults: initial_temperature=2.0, cooling_rate=0.95 (exponential decay
-    T = T0 * cooling_rate**generation), min_temperature=0.01 as a floor so
-    the acceptance probability calculation never divides by (near) zero.
-    These are reasonable starting points for the energy scale seen so far
-    (|<H>| roughly in the 0-n_qubits range); retune if the lattice or
-    Hamiltonian coefficients change significantly.
+    Unlike the greedy approach, this algorithm can temporarily accept energy-increasing 
+    (worse) mutations with a probability of exp(-delta_E / T) to escape local minima. 
+    As the temperature (T) exponentially decays over the generations, it gradually 
+    transitions into a strict Hill Climbing behavior to lock into the ground state.
     """
     print("\n--- STARTING SIMULATED ANNEALING ---")
  
@@ -100,7 +91,11 @@ def simulated_annealing_lattice(
         })
  
     print("\n--- SIMULATED ANNEALING FINISHED ---")
- 
+
+
+    # ==========================================
+    # DATA PERSISTENCE
+    # ==========================================
     src_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     results_dir = os.path.join(src_dir, "results")
     os.makedirs(results_dir, exist_ok=True)
@@ -125,8 +120,8 @@ def simulated_annealing_lattice(
                 row_str.append(str(val))
             file.write(" ".join(row_str) + "\n")
  
-    print(f"-> Histórico completo exportado para: {csv_filename}")
-    print(f"-> Configuração ótima exportada para: {config_filename}")
+    print(f"-> Full history exported to: {csv_filename}")
+    print(f"-> Optimal configuration exported to: {config_filename}")
     print(f"Final Minimum Energy (Ising <H>): {best_energy:.4f}")
     print(f"Final Objective C(x): {best_energy + qubo_offset:.4f}")
     lattice.print_classical_state()

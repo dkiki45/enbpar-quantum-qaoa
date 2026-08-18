@@ -41,6 +41,7 @@ def calculate_distance_meters(lat1, lon1, lat2, lon2):
 # 2. INTEGRATION FUNCTION (Exporting to the Pipeline)
 # ============================================================
 def get_real_qubo_terms(
+
     csv_path=None,
     limit=15,
     led_radius_meters=20.0,
@@ -51,21 +52,7 @@ def get_real_qubo_terms(
     """
     Reads real data, builds the neighborhood graph, and returns the Ising
     terms derived from the formalized QUBO objective:
- 
-        C(x) = -alpha * sum_i x_i + beta * sum_{(i,j) in E} x_i * x_j
- 
-    where x_i = 1 means streetlight i is ON. The QUBO is built explicitly
-    (see qubo_formalization.build_qubo) and only then converted to Ising
-    (Z / ZZ Pauli terms) via qubo_formalization.qubo_to_ising, instead of
-    writing Z/ZZ coefficients by hand as before.
- 
-    Returns:
-        qubo_terms: list of dicts {"coefficient", "pauli", "qubits"} -
-                    same shape consumed by the rest of the pipeline.
-        offset:     constant term picked up by the x_i -> Z_i substitution.
-                    It doesn't change WHERE the minimum is, but it does
-                    change the reported numeric value of the energy, so
-                    callers that want the true C(x) value must add it back.
+    
     """
 
     if csv_path is None:

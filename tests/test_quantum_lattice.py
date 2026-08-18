@@ -3,10 +3,9 @@ import os
 import unittest
 import numpy as np
 
-# Aponta para a nova pasta 'src'
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-# Importa da nova arquitetura limpa
+# Imports from the new clean architecture
 from core.lattice_model import QuantumLattice2D, LatticeCell
 
 class TestQuantumLattice2D(unittest.TestCase):
@@ -27,32 +26,30 @@ class TestQuantumLattice2D(unittest.TestCase):
         self.assertIsInstance(cell, LatticeCell)
         self.assertEqual(cell.qubit_index, 0)
         
-        # Verifica se a IA inicializou as mutações (theta) de forma aleatória
+        # Checks if the AI initialized the mutations (theta) randomly
         self.assertTrue(0.0 <= cell.theta <= 2 * np.pi)
 
     def test_cell_attributes(self):
         """Tests if cell attributes can be accessed and modified directly."""
         cell = self.lattice.cells[1, 1]
         
-        # Agora alteramos os atributos diretamente via POO em vez de usar set_value()
         cell.value = 1
         cell.fitness = 10.5
         cell.occupied = False
         
-        # Verifica se o salvamento ocorreu perfeitamente
+        # Checks if the update was successful
         self.assertEqual(self.lattice.cells[1, 1].value, 1)
         self.assertEqual(self.lattice.cells[1, 1].fitness, 10.5)
         self.assertFalse(self.lattice.cells[1, 1].occupied)
         
-        # Verifica se as outras células permaneceram intactas
+        # Checks if other cells remained intact
         self.assertEqual(self.lattice.cells[0, 0].value, 0)
 
     def test_qubit_mapping(self):
         """Tests if the coordinate to Qubit mapping dictionary is correct."""
-        # Em uma matriz 2x2 (rodando linha por linha), a posição (1, 1) deve ser o Qubit 3
         self.assertEqual(self.lattice.cells[1, 1].qubit_index, 3)
 
-        # Checa o dicionário reverso qubit_map criado no __init__
+        # Checks the reverse dictionary qubit_map created in __init__
         pos = self.lattice.qubit_map[2]
         self.assertEqual(pos, (1, 0))
 

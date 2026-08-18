@@ -11,19 +11,9 @@ from core.quantum_physics import HamiltonianTerm, evaluate_lattice_energy
 
 def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_terms: List[HamiltonianTerm], generations: int = 100, mutation_rate: float = 0.3, experiment_name: str = "experiment", qubo_offset: float = 0.0, epsilon: float = 0.01):
     """
-    qubo_offset: constant returned by qubo_to_ising(). The Ising
-    energy (<H>) by itself is NOT equal to the original classical C(x) --
-    it equals C(x) - offset. We add the offset back only for reporting
-    purposes (the search/acceptance step keeps using the Ising energy,
-    since a constant shift doesn't change where the minimum sits).
- 
-    epsilon: energy tolerance. Energy is measured by
-    shot sampling, so tiny improvements can be pure statistical noise
-    rather than a real signal. We only accept a mutation when it beats
-    the current best by more than epsilon: new_energy < best_energy - epsilon.
-    Default 0.01 was chosen because typical shot noise on these small
-    circuits (4096 shots) sits around that order of magnitude; tune it
-    if you change shot count or circuit size.
+    The algorithm iteratively mutates a random qubit's angle (theta) and evaluates 
+    the new Ising energy. It strictly accepts mutations that lower the global 
+    energy beyond a statistical noise-tolerance threshold (epsilon).
     """
     print("\n--- STARTING LATTICE EVOLUTION ---")
     
@@ -78,6 +68,8 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
         })
             
     print("\n--- EVOLUTION FINISHED ---")
+
+
  
     # ==========================================
     # DATA PERSISTENCE
@@ -110,8 +102,8 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
                 row_str.append(str(val))
             file.write(" ".join(row_str) + "\n")
             
-    print(f"-> Histórico completo exportado para: {csv_filename}")
-    print(f"-> Configuração ótima exportada para: {config_filename}")
+    print(f"-> Full history exported to: {csv_filename}")
+    print(f"-> Optimal configuration exported to: {config_filename}")
  
     print(f"Final Minimum Energy (Ground State, Ising <H>): {best_energy:.4f}")
     print(f"Final Objective C(x): {best_energy + qubo_offset:.4f}")

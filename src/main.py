@@ -26,7 +26,7 @@ if __name__ == "__main__":
     sim.set_options(seed_simulator=experiment_seed)
  
     # ========================================================
-    # PARÂMETROS GLOBAIS DO EXPERIMENTO
+    # GLOBAL EXPERIMENT PARAMETERS
     # ========================================================
     N_STREETLIGHTS = 15
     GENERATIONS = 300
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     print(f"\n[PIPELINE] 2. Mapping real streetlights to the Qiskit Lattice...")
     prado_velho_grid = QuantumLattice2D(rows=1, cols=n_qubits_real)
 
-    # Cria uma cópia limpa e idêntica para o Simulated Annealing testar do mesmo ponto de partida
+    # Creates a clean, identical copy so Simulated Annealing starts from the same initial state
     prado_velho_grid_sa = copy.deepcopy(prado_velho_grid)
     
     print("\n[PIPELINE] 3. Converting dictionary rules to HamiltonianTerm objects...")
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     
     print("\n[PIPELINE] 4. Starting combinatorial optimization...")
 
-    # Roda o otimizador Guloso
+    # Runs the Greedy optimizer (Hill Climbing)
     hill_climbing_lattice(
         lattice=prado_velho_grid, 
         simulator=sim, 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         qubo_offset=qubo_offset,
     )
 
-    # Roda o otimizador Térmico
+    # Runs the Thermal optimizer (Simulated Annealing)
     simulated_annealing_lattice(
         lattice=prado_velho_grid_sa,
         simulator=sim,

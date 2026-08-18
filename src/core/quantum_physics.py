@@ -61,8 +61,7 @@ def evaluate_lattice_energy(lattice: QuantumLattice2D, simulator: AerSimulator, 
 def _h_terms_to_sparse_pauli_op(h_terms: List[HamiltonianTerm], n_qubits: int) -> SparsePauliOp:
     """Converts our HamiltonianTerm list into a qiskit SparsePauliOp so we
     can compute an exact expectation value from a Statevector, without
-    shots. Works for both Z (single-qubit) and ZZ (two-qubit) terms, so
-    it stays valid once Phase E introduces entangled ZZ terms too."""
+    shots. Works for both Z (single-qubit) and ZZ (two-qubit) terms."""
     pauli_list = []
     for term in h_terms:
         label = ["I"] * n_qubits
