@@ -1,0 +1,4 @@
+Final Minimum Energy (Ising <H>): -6.4766
+Final Objective C(x): -13.4766
+Final LED Grid Configuration (1 = ON, 0 = OFF):
+1 1 1 1 0 1 1 1 1 1 1 1 1 1 1

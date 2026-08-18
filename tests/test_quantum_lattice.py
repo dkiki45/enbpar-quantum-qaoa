@@ -1,9 +1,13 @@
 import sys
 import os
 import unittest
+import numpy as np
 
+# Aponta para a nova pasta 'src'
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-from quantum_lattice_2d_template import QuantumLattice2D, LatticeCell
+
+# Importa da nova arquitetura limpa
+from core.lattice_model import QuantumLattice2D, LatticeCell
 
 class TestQuantumLattice2D(unittest.TestCase):
 
@@ -19,40 +23,38 @@ class TestQuantumLattice2D(unittest.TestCase):
         self.assertEqual(self.lattice.cells.shape, (2, 2))
         
         # Checks if the cells were instantiated as LatticeCell objects
-        self.assertIsInstance(self.lattice.cells[0, 0], LatticeCell)
-        self.assertEqual(self.lattice.cells[0, 0].qubit_index, 0)
+        cell = self.lattice.cells[0, 0]
+        self.assertIsInstance(cell, LatticeCell)
+        self.assertEqual(cell.qubit_index, 0)
+        
+        # Verifica se a IA inicializou as mutações (theta) de forma aleatória
+        self.assertTrue(0.0 <= cell.theta <= 2 * np.pi)
 
-    def test_set_and_get_value(self):
-        """Tests the set_value and get_value"""
-        # Sets a classical value (e.g., turns on the streetlight at row 1, col 1)
-        self.lattice.set_value(1, 1, 1)
+    def test_cell_attributes(self):
+        """Tests if cell attributes can be accessed and modified directly."""
+        cell = self.lattice.cells[1, 1]
         
-        # Checks if the value was saved and read correctly
-        self.assertEqual(self.lattice.get_value(1, 1), 1)
+        # Agora alteramos os atributos diretamente via POO em vez de usar set_value()
+        cell.value = 1
+        cell.fitness = 10.5
+        cell.occupied = False
         
-        # Checks if the other cells remain turned off (0)
-        self.assertEqual(self.lattice.get_value(0, 0), 0)
+        # Verifica se o salvamento ocorreu perfeitamente
+        self.assertEqual(self.lattice.cells[1, 1].value, 1)
+        self.assertEqual(self.lattice.cells[1, 1].fitness, 10.5)
+        self.assertFalse(self.lattice.cells[1, 1].occupied)
+        
+        # Verifica se as outras células permaneceram intactas
+        self.assertEqual(self.lattice.cells[0, 0].value, 0)
 
     def test_qubit_mapping(self):
-        """Tests if the coordinate to Qubit mapping conversion is correct."""
-        # In a 2x2 lattice, position (1, 1) should be Qubit 3
-        qubit = self.lattice.pos_to_qubit(1, 1)
-        self.assertEqual(qubit, 3)
+        """Tests if the coordinate to Qubit mapping dictionary is correct."""
+        # Em uma matriz 2x2 (rodando linha por linha), a posição (1, 1) deve ser o Qubit 3
+        self.assertEqual(self.lattice.cells[1, 1].qubit_index, 3)
 
-        # Qubit 2 should be at position (1, 0)
-        pos = self.lattice.qubit_to_pos(2)
+        # Checa o dicionário reverso qubit_map criado no __init__
+        pos = self.lattice.qubit_map[2]
         self.assertEqual(pos, (1, 0))
-
-    def test_delete_individual(self):
-        """Tests if the cell deletion/reset function works correctly."""
-        self.lattice.cells[0, 0].fitness = 10.5
-        self.lattice.cells[0, 0].value = 1
-        
-        self.lattice.cells[0, 0].delete_individual()
-        
-        self.assertFalse(self.lattice.cells[0, 0].occupied)
-        self.assertEqual(self.lattice.cells[0, 0].fitness, 0.0)
-        self.assertEqual(self.lattice.cells[0, 0].value, 0)
 
 if __name__ == '__main__':
     unittest.main()

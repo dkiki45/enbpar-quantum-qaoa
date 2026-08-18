@@ -21,7 +21,7 @@ import os
 import pandas as pd
 import numpy as np
 
-from qubo_formalization import build_qubo, qubo_to_ising, ALPHA_COVERAGE, BETA_REDUNDANCY
+from core.qubo_formalization import build_qubo, qubo_to_ising, ALPHA_COVERAGE, BETA_REDUNDANCY
 
 # ============================================================
 # 1. MATHEMATICAL ENGINE: DISTANCE CALCULATION (HAVERSINE)
@@ -42,8 +42,9 @@ def calculate_distance_meters(lat1, lon1, lat2, lon2):
 # ============================================================
 def get_real_qubo_terms(
     csv_path=None,
-    limit=150,
-    led_radius_meters=10.0,
+    limit=15,
+    led_radius_meters=20.0,
+    tolerance_factor=1.2,
     alpha=ALPHA_COVERAGE,
     beta=BETA_REDUNDANCY,
 ):
@@ -87,7 +88,7 @@ def get_real_qubo_terms(
  
     # Former "Graph Construction" section
     edges = []
-    overlap_threshold = 2 * led_radius_meters
+    overlap_threshold = tolerance_factor * led_radius_meters
 
     for i in range(len(coords)):
         for j in range(i + 1, len(coords)):
@@ -106,17 +107,3 @@ def get_real_qubo_terms(
  
     return qubo_terms, offset
  
-# ============================================================
-# 3. STANDALONE EXECUTION (If running this file directly)
-# ============================================================
-if __name__ == "__main__":
-    # Tests the extraction in isolation to ensure it is working
-    terms, offset = get_real_qubo_terms()
-    print(f"\nTotal mathematical constraints generated: {len(terms)}")
-    print(f"Constant offset (from x_i = (1-Z_i)/2 substitution): {offset:+.4f}")
- 
-    zz_terms = [t for t in terms if t["pauli"] == "ZZ"]
-    if zz_terms:
-        print("\nExample of the first 5 spatial conflict rules (Penalties):")
-        for t in zz_terms[:5]:
-            print(f"-> Penalty between Qubit {t['qubits'][0]} and Qubit {t['qubits'][1]} (J={t['coefficient']:+.4f})")

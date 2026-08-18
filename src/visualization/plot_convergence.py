@@ -62,8 +62,8 @@ def plot_algorithmic_convergence(hc_csv_path: str, sa_csv_path: str, output_file
     
     # Saving the image to the results directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.dirname(script_dir) 
-    results_dir = os.path.join(base_dir, "results")
+    src_dir = os.path.dirname(script_dir) 
+    results_dir = os.path.join(src_dir, "results")
     output_path = os.path.join(results_dir, output_filename)
     
     plt.savefig(output_path, dpi=300) # High resolution for the report
@@ -74,8 +74,8 @@ def plot_algorithmic_convergence(hc_csv_path: str, sa_csv_path: str, output_file
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.dirname(script_dir) 
-    results_dir = os.path.join(base_dir, "results")
+    src_dir = os.path.dirname(script_dir) 
+    results_dir = os.path.join(src_dir, "results")
     
     hc_pattern = "*_leds_history_*.csv"
     sa_pattern = "*_leds_sa_history_*.csv"

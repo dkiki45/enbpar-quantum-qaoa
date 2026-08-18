@@ -42,9 +42,9 @@ def parse_config_txt(filepath):
 def plot_geographic_mis(led_radius_meters=20.0):
     # 1. Setup paths
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.dirname(script_dir)
-    data_path = os.path.join(base_dir, "data", "paranainterativo.csv")
-    results_dir = os.path.join(base_dir, "results")
+    src_dir = os.path.dirname(script_dir)
+    data_path = os.path.join(src_dir, "data", "paranainterativo.csv")
+    results_dir = os.path.join(src_dir, "results")
     
     # 2. Get the latest configuration
     latest_txt = get_latest_config_file(results_dir)
@@ -110,8 +110,9 @@ def plot_geographic_mis(led_radius_meters=20.0):
 
     plt.tight_layout()
     
-    # Save output
-    output_filename = os.path.join(results_dir, "mis_geographic_map.png")
+    # Save output dynamically reflecting the radius size in the filename
+    radius_str = str(int(led_radius_meters)) if led_radius_meters.is_integer() else str(led_radius_meters)
+    output_filename = os.path.join(results_dir, f"mis_geographic_map_{radius_str}m.png")
     plt.savefig(output_filename, dpi=300)
     print(f"-> Energy savings: {n_streetlights - on_count} streetlights turned off.")
     print(f"-> Map successfully generated and saved to: {output_filename}")
@@ -120,4 +121,4 @@ def plot_geographic_mis(led_radius_meters=20.0):
 
 if __name__ == "__main__":
     # Ensure this matches the radius used in real_graph_qubo.py
-    plot_geographic_mis(led_radius_meters=10.0)
+    plot_geographic_mis(led_radius_meters=20.0)
