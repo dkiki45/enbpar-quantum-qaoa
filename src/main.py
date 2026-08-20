@@ -7,8 +7,12 @@ from qiskit_aer import AerSimulator
 from core.real_graph_qubo import get_real_qubo_terms
 from core.lattice_model import QuantumLattice2D
 from core.quantum_physics import HamiltonianTerm
+
 from core.optimizers.hill_climbing import hill_climbing_lattice
 from core.optimizers.simulated_annealing import simulated_annealing_lattice
+from core.optimizers.gradient_descent import gradient_descent_lattice
+from core.optimizers.genetic_algorithm import genetic_algorithm_lattice
+from core.optimizers.differential_evolution import differential_evolution_lattice
 
 def set_reproducible_seed(seed: Optional[int] = None) -> int:
     if seed is None:
@@ -45,10 +49,13 @@ if __name__ == "__main__":
               f"{n_qubits_real} fixtures. Using {n_qubits_real}.")
     
     print(f"\n[PIPELINE] 2. Mapping real streetlights to the Qiskit Lattice...")
-    prado_velho_grid = QuantumLattice2D(rows=1, cols=n_qubits_real)
+    prado_velho_grid_hc = QuantumLattice2D(rows=1, cols=n_qubits_real)
 
     # Creates a clean, identical copy so Simulated Annealing starts from the same initial state
-    prado_velho_grid_sa = copy.deepcopy(prado_velho_grid)
+    prado_velho_grid_sa = copy.deepcopy(prado_velho_grid_hc)
+    prado_velho_grid_gd = copy.deepcopy(prado_velho_grid_hc)
+    prado_velho_grid_ga = copy.deepcopy(prado_velho_grid_hc)
+    prado_velho_grid_de = copy.deepcopy(prado_velho_grid_hc)
     
     print("\n[PIPELINE] 3. Converting dictionary rules to HamiltonianTerm objects...")
     h_terms_real = []
@@ -67,12 +74,12 @@ if __name__ == "__main__":
 
     # Runs the Greedy optimizer (Hill Climbing)
     hill_climbing_lattice(
-        lattice=prado_velho_grid, 
+        lattice=prado_velho_grid_hc, 
         simulator=sim, 
         h_terms=h_terms_real, 
         generations=GENERATIONS, 
         mutation_rate=MUTATION_RATE,
-        experiment_name=f"prado_velho_{n_qubits_real}_leds",
+        experiment_name=f"prado_velho_{n_qubits_real}_leds_hc",
         qubo_offset=qubo_offset,
     )
 
@@ -84,5 +91,35 @@ if __name__ == "__main__":
         generations=GENERATIONS,
         mutation_rate=MUTATION_RATE,
         experiment_name=f"prado_velho_{n_qubits_real}_leds_sa",
+        qubo_offset=qubo_offset,
+    )
+
+    # Runs the Gradient Descent optimizer
+    gradient_descent_lattice(
+        lattice=prado_velho_grid_gd,
+        simulator=sim,
+        h_terms=h_terms_real,
+        generations=GENERATIONS,
+        experiment_name=f"prado_velho_{n_qubits_real}_leds_gd",
+        qubo_offset=qubo_offset,
+    )
+
+    # Runs the Genetic Algorithm optimizer
+    genetic_algorithm_lattice(
+        lattice=prado_velho_grid_ga,
+        simulator=sim,
+        h_terms=h_terms_real,
+        generations=GENERATIONS,
+        experiment_name=f"prado_velho_{n_qubits_real}_leds_ga",
+        qubo_offset=qubo_offset,
+    )
+
+    # Runs the Differential Evolution optimizer
+    differential_evolution_lattice(
+        lattice=prado_velho_grid_de,
+        simulator=sim,
+        h_terms=h_terms_real,
+        generations=GENERATIONS,
+        experiment_name=f"prado_velho_{n_qubits_real}_leds_de",
         qubo_offset=qubo_offset,
     )

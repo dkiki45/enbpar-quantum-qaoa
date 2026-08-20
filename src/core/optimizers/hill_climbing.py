@@ -8,6 +8,7 @@ from qiskit_aer import AerSimulator
 
 from core.lattice_model import QuantumLattice2D
 from core.quantum_physics import HamiltonianTerm, evaluate_lattice_energy
+from core.optimizers.gradient_descent import _save_optimizer_results
 
 def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_terms: List[HamiltonianTerm], generations: int = 100, mutation_rate: float = 0.3, experiment_name: str = "experiment", qubo_offset: float = 0.0, epsilon: float = 0.01):
     """
@@ -70,45 +71,5 @@ def hill_climbing_lattice(lattice: QuantumLattice2D, simulator: AerSimulator, h_
     print("\n--- EVOLUTION FINISHED ---")
 
 
- 
-    # ==========================================
-    # DATA PERSISTENCE
-    # ==========================================
-    src_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    results_dir = os.path.join(src_dir, "results")
-    os.makedirs(results_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # Export CSV
-    csv_filename = os.path.join(results_dir, f"{experiment_name}_history_{timestamp}.csv")
-    with open(csv_filename, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=["generation", "qubit_mutated", "energy", "objective_cx", "status", "time_elapsed_sec"])
-        writer.writeheader()
-        writer.writerows(history_log)
-    
-    # Optimal Config Export (TXT)
-    config_filename = os.path.join(results_dir, f"{experiment_name}_optimal_config_{timestamp}.txt")
-    with open(config_filename, 'w') as file:
-        file.write(f"Final Minimum Energy (Ising <H>): {best_energy:.4f}\n")
-        file.write(f"Final Objective C(x): {best_energy + qubo_offset:.4f}\n")
-        file.write("Final LED Grid Configuration (1 = ON, 0 = OFF):\n")
-        
-        # Extracts the classic matrix and saves it.
-        for i in range(lattice.rows):
-            row_str = []
-            for j in range(lattice.cols):
-                theta = lattice.cells[i, j].theta % (2 * np.pi)
-                val = 1 if np.pi/2 < theta < 3*np.pi/2 else 0
-                row_str.append(str(val))
-            file.write(" ".join(row_str) + "\n")
-            
-    print(f"-> Full history exported to: {csv_filename}")
-    print(f"-> Optimal configuration exported to: {config_filename}")
- 
-    print(f"Final Minimum Energy (Ground State, Ising <H>): {best_energy:.4f}")
-    print(f"Final Objective C(x): {best_energy + qubo_offset:.4f}")
-    print("Final LED Grid Configuration:")
-    lattice.print_classical_state()
- 
-    return best_energy, lattice
+    return _save_optimizer_results(lattice, best_energy, history_log, experiment_name, qubo_offset)
  
