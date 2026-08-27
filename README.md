@@ -1,69 +1,26 @@
-# Research Project: Quantum Optimization for LED Retrofitting (ENBPar)
+# 🚀 Refatoração QAOA - PIBIC ENBPar
 
-**Scientific Initiation Research (PIBIC) - PUCPR**
-**Student:** David Bobato Kikina | **Advisors:** Profs. Jonas Krause and Rodrigo Pasti
+Esta branch (`feature/refatoracao-qaoa`) é dedicada à migração da arquitetura antiga baseada em VQE heurístico para a implementação formal do algoritmo QAOA, conforme diretrizes do relatório técnico de avaliação.
 
-## Overview
-This repository contains the algorithms and technical documentation for the development of a Quantum Combinatorial Optimization model. The objective is to create a system capable of intelligent planning (retrofitting) for ENBPar's public lighting infrastructure, utilizing the **Quantum Approximate Optimization Algorithm (QAOA)** to solve large-scale logistical bottlenecks that are intractable for classical computing.
+O cronograma de implementação foi dividido em um sprint intensivo de 3 dias.
 
-At its core, the retrofitting problem is mapped onto a **Maximal Independent Set (MIS)** problem: each streetlight is a node in a graph, and an edge is drawn between two nodes whenever they are close enough to cause redundant/overlapping illumination. Solving for the MIS of this graph yields the largest possible subset of streetlights that can be kept active with zero spatial conflict between them — maximizing coverage while eliminating redundancy.
+## 🏁 Cronograma de Execução (Hackathon 72h)
 
----
+### ✅ Dia 1: Base Matemática e Validação (Concluído)
+- [x] Limpeza da arquitetura heurística (pasta `optimizers` e arquivos legados).
+- [x] `src/core/qubo_formalization.py`: Unificação da classe `IsingModel` e conversão exata de QUBO para matrizes de Pauli ($Z$ e $ZZ$) usando `SparsePauliOp`[cite: 7].
+- [x] `src/core/classical_baseline.py`: Algoritmo de força bruta implementado para calcular o gabarito absoluto do custo clássico[cite: 7].
+- [x] `tests/test_qubo_ising.py`: Teste passando 100%, provando a equivalência matemática entre a energia clássica e a expectativa quântica no Qiskit[cite: 7].
 
-## Project Architecture
-```text
-├── data/
-│   └── paranainterativo.csv         # Real-world IPPUC dataset (GPS coordinates)
-├── src/                             
-│   ├── core/                        # Quantum simulation and math logic (QUBO, Hamiltonians)
-│   │   ├── optimizers/              # Hill Climbing, Simulated Annealing.. algorithms
-│   │   └── ...                      # (quantum_physics, lattice_model, real_graph_qubo..)
-│   ├── data/                        
-│   │   └── paranainterativo.csv     # Real-world IPPUC dataset (GPS coordinates)
-│   ├── visualization/               # Scripts to plot convergence graphs and maps
-│   ├── results/                     # Generated outputs (CSVs, TXTs, and PNG graphs)
-│   └── main.py                      # Main entry point of the application
-├── tests/
-│   └── test_quantum_lattice.py      # Unit test suite for lattice structures
-├── .gitignore
-└── README.md
-```
+### ⏳ Dia 2: O Motor QAOA e Decodificação (Em Andamento)
+O objetivo deste dia é construir o circuito quântico real e configurar os otimizadores nativos.
+- [ ] **`src/core/qaoa_circuit.py`**: Construir o ansatz explícito do QAOA, aplicando portas $H$ no estado inicial e alternando as camadas do Hamiltoniano de Custo ($RZ$, $RZZ$) e do Mixer ($RX$)[cite: 7].
+- [ ] **`src/core/qaoa_solver.py`**: Configurar a classe nativa `QAOA` do `qiskit_algorithms`, integrando o `StatevectorSampler` e otimizadores como `COBYLA` ou `SPSA`[cite: 7].
+- [ ] **`src/core/solution_decoder.py`**: Criar o decodificador para mapear a distribuição de probabilidades das *bitstrings* medidas, separando soluções factíveis das que possuem violações de arestas[cite: 7].
+- [ ] **Teste**: Fazer o arquivo `tests/test_qaoa_circuit.py` passar sem erros, atestando a profundidade $p$ e os parâmetros $\gamma$ e $\beta$[cite: 7].
 
----
-
-## Technical Guide: Parameter Tuning & Experimentation
-
-You can tweak parameters in the source code to change how the AI and the quantum physics behave.
-
-### 1. QUBO Hamiltonian Calibration
-The objective function balances rewards and penalties:
-
-$$C(x) = -\alpha \sum_i x_i + \beta \sum_{(i,j) \in E} x_i x_j$$
-
-* `ALPHA_COVERAGE`: The reward for turning a streetlight ON.
-* `BETA_REDUNDANCY`: The penalty applied when two conflicting streetlights are ON at the same time. The penalty must be strictly higher than the reward to enforce the MIS constraint.
-
-### 2. Topological Graph Generation
-* The project uses Haversine distance calculations to extract real geographic data.
-* led_radius_meters: Defines the physical coverage radius of a streetlight. This sets the conflict threshold between nodes.
-
-### 3. Optimization Engines 
-The AI uses hybrid classical-quantum approaches to minimize the Ising energy:
-
-* Simulated Annealing: Uses a cooling schedule and thermodynamic probability ($\exp(-\Delta E / T)$) to escape local minima.  
-* Shot-Noise Tolerance (epsilon): A filter used to differentiate real energy improvements from the statistical variance of the quantum simulator.
-
----
-
-## How to Run the Pipeline
-Ensure you run these commands from the **root directory** of the pro
-
-1. Run the main simulation: python src/main.py
-2. Plot Algorithmic Convergence: python src/visualization/plot_convergence.py
-3. Plot Geographic Map: python src/visualization/plot_mis_map.py
-
----
-
-## Real-World Data Extraction (Prado Velho / PUCPR)
-![Mapa dos postes no Prado Velho](assets/mapa_prado_velho.png)
-*Fonte: [Portal Paraná Interativo - Governo do Estado do Paraná](https://paranainterativo.pr.gov.br/portal/apps/webappviewer/index.html?id=f282d1c181c0405789e2f65c17ac274d)*
+### 📅 Dia 3: Integração, Dados Reais e Resultados
+O objetivo final é plugar o mapa geográfico e rodar os testes de ponta a ponta.
+- [ ] **`src/core/graph_builder.py`**: Ajustar o parsing do CSV usando a fórmula de Haversine para garantir um grafo de cobertura realista, evitando instâncias triviais[cite: 7].
+- [ ] **`src/experiments/run_qaoa.py`**: Finalizar o orquestrador (CLI) que juntará todas as peças para gerar o `summary.json` contendo razões de aproximação, energias esperadas e os melhores candidatos amostrados[cite: 7].
+- [ ] **Teste Final**: Fazer o `tests/test_end_to_end.py` passar limpo, simulando um pipeline completo com uma instância pequena controlada[cite: 7].
