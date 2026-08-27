@@ -1,26 +1,30 @@
-# 🚀 Refatoração QAOA - PIBIC ENBPar
+# Research Project: Quantum Optimization for LED Retrofitting (ENBPar)
+*PIBIC PUCPR - Student: David Bobato Kikina | Advisors: Profs. Jonas Krause and Rodrigo Pasti*
 
-Esta branch (`feature/refatoracao-qaoa`) é dedicada à migração da arquitetura antiga baseada em VQE heurístico para a implementação formal do algoritmo QAOA, conforme diretrizes do relatório técnico de avaliação.
+> *Note: The `main` branch contains the formal QAOA architecture (Phase P0). The legacy classical heuristic optimizers are archived in the `v1-otimizadores-heuristicos` branch.*
 
-O cronograma de implementação foi dividido em um sprint intensivo de 3 dias.
+This repository maps public lighting planning as a **Maximal Independent Set (MIS)** mathematical problem. The goal is to use the **QAOA** quantum algorithm to find the maximum number of streetlights that can remain active without their illumination areas overlapping spatially.
 
-## 🏁 Cronograma de Execução (Hackathon 72h)
+**Phase P0: Formal QAOA Implementation**
+* **QUBO to Ising:** Exact mathematical conversion using `SparsePauliOp` ($Z$ and $ZZ$ matrices).
+* **Quantum Circuit:** Explicit Ansatz alternating Cost ($RZZ$) and Mixer ($RX$) gates.
+* **Hybrid Engine:** Integration of the `COBYLA` classical optimizer with the `StatevectorSampler` quantum simulator.
+* **Geographic Data:** Reading real CSV coordinates and calculating physical distance constraints via the Haversine formula.
+* **Absolute Validation:** Solution decoder paired with an exact brute-force algorithm to certify the accuracy rate.
 
-### ✅ Dia 1: Base Matemática e Validação (Concluído)
-- [x] Limpeza da arquitetura heurística (pasta `optimizers` e arquivos legados).
-- [x] `src/core/qubo_formalization.py`: Unificação da classe `IsingModel` e conversão exata de QUBO para matrizes de Pauli ($Z$ e $ZZ$) usando `SparsePauliOp`[cite: 7].
-- [x] `src/core/classical_baseline.py`: Algoritmo de força bruta implementado para calcular o gabarito absoluto do custo clássico[cite: 7].
-- [x] `tests/test_qubo_ising.py`: Teste passando 100%, provando a equivalência matemática entre a energia clássica e a expectativa quântica no Qiskit[cite: 7].
+**Directory Structure**
+* `src/core/`: All quantum physics logic, graph processing, and solution decoding.
+* `src/experiments/run_qaoa.py`: Main orchestrator file to run the simulation and generate JSON/graph reports.
+* `tests/`: Rigorous test suite ensuring mathematical and structural parity of the project.
 
-### ✅ Dia 2: O Motor QAOA e Decodificação (Concluído)
-O objetivo deste dia é construir o circuito quântico real e configurar os otimizadores nativos.
-- [x] **`src/core/qaoa_circuit.py`**: Construir o ansatz explícito do QAOA, aplicando portas $H$ no estado inicial e alternando as camadas do Hamiltoniano de Custo ($RZ$, $RZZ$) e do Mixer ($RX$)[cite: 7].
-- [x] **`src/core/qaoa_solver.py`**: Configurar a classe nativa `QAOA` do `qiskit_algorithms`, integrando o `StatevectorSampler` e otimizadores como `COBYLA` ou `SPSA`[cite: 7].
-- [x] **`src/core/solution_decoder.py`**: Criar o decodificador para mapear a distribuição de probabilidades das *bitstrings* medidas, separando soluções factíveis das que possuem violações de arestas[cite: 7].
-- [x] **Teste**: Fazer o arquivo `tests/test_qaoa_circuit.py` passar sem erros, atestando a profundidade $p$ e os parâmetros $\gamma$ e $\beta$[cite: 7].
+**How to Run**
 
-### ✅ Dia 3: Integração, Dados Reais e Resultados (Concluído)
-O objetivo final é plugar o mapa geográfico e rodar os testes de ponta a ponta.
-- [x] **`src/core/graph_builder.py`**: Ajustar o parsing do CSV usando a fórmula de Haversine para garantir um grafo de cobertura realista, evitando instâncias triviais.
-- [x] **`src/experiments/run_qaoa.py`**: Finalizar o orquestrador (CLI) que juntará todas as peças para gerar o `summary.json` contendo razões de aproximação, energias esperadas, e salvar o gráfico da curva de convergência do COBYLA.
-- [x] **Teste Final**: Fazer o `tests/test_end_to_end.py` passar limpo, simulando um pipeline completo com uma instância pequena controlada.
+Run the end-to-end main simulation:
+```bash
+PYTHONPATH=src python src/experiments/run_qaoa.py
+```
+
+Run the validation test suite:
+```bash
+PYTHONPATH=src pytest
+```
