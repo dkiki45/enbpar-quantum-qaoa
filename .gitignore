@@ -1,6 +1,12 @@
-__pycache__
+# Cache do Python e Pytest
+__pycache__/
+*.pyc
+.pytest_cache/
 
+# Ambientes Virtuais
+.venv/
+venv/
+env/
+
+# O Mac costuma criar esse arquivo chato nas pastas
 .DS_Store
-**/.DS_Store
-
-sandbox/
