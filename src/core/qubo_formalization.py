@@ -1,82 +1,74 @@
-# ============================================================
-# MATHEMATICAL FORMALIZATION (QUBO -> ISING)
-# ============================================================
-
-from typing import Dict, List, Tuple
 from dataclasses import dataclass
+from typing import Dict, Iterable, List, Sequence, Tuple
+import numpy as np
+from qiskit.quantum_info import SparsePauliOp
 
-# Default weights for the classical objective function
-ALPHA_COVERAGE = 1.0
-BETA_REDUNDANCY = 2.0
+Edge = Tuple[int, int]
 
+@dataclass(frozen=True)
+class IsingModel:
+    n_vars: int
+    h: Dict[int, float]
+    j: Dict[Edge, float]
+    offset: float
 
-@dataclass
-class HamiltonianTerm:
-    coefficient: float
-    pauli: str
-    qubits: Tuple[int, ...]
-
-
-# ============================================================
-# 1. CLASSICAL OBJECTIVE FUNCTION (QUBO)
-# ============================================================
-def build_qubo(
-    n_vars: int,
-    edges: List[Tuple[int, int]],
-    alpha: float = ALPHA_COVERAGE,
-    beta: float = BETA_REDUNDANCY,
-) -> Tuple[Dict[int, float], Dict[Tuple[int, int], float], float]:
-    """
-    Explicitly builds C(x) = -alpha * sum_i x_i + beta * sum_{(i,j) in E} x_i x_j
-
-    Returns:
-        linear:    {i: a_i}       coefficient of x_i
-        quadratic: {(i,j): b_ij}  coefficient of x_i * x_j  (i < j)
-        offset0:   classical constant (0.0 here, but kept for generality in
-                   case constant terms need to be added later)
-    """
-    linear: Dict[int, float] = {i: -alpha for i in range(n_vars)}
-    quadratic: Dict[Tuple[int, int], float] = {}
-    for (i, j) in edges:
-        lo, hi = (i, j) if i < j else (j, i)
-        quadratic[(lo, hi)] = quadratic.get((lo, hi), 0.0) + beta
-    offset0 = 0.0
-    return linear, quadratic, offset0
+    def to_sparse_pauli_op(self):
+        terms = []
+        for i, coef in self.h.items():
+            label = ["I"] * self.n_vars
+            label[i] = "Z"
+            terms.append(("".join(reversed(label)), coef))
+            
+        for (i, j), coef in self.j.items():
+            label = ["I"] * self.n_vars
+            label[i] = "Z"
+            label[j] = "Z"
+            terms.append(("".join(reversed(label)), coef))
+            
+        return SparsePauliOp.from_list(terms or [("I" * self.n_vars, 0.0)]).simplify()
 
 
-# ============================================================
-# 2. QUBO -> ISING CONVERSION 
-# ============================================================
-def qubo_to_ising(
-    linear: Dict[int, float],
-    quadratic: Dict[Tuple[int, int], float],
-    offset0: float = 0.0,
-) -> Tuple[List[HamiltonianTerm], float]:
-    """
-    Formally applies the substitution  x_i = (1 - Z_i) / 2  to every QUBO
-    term and returns the Ising terms (Z and ZZ) together with the global
-    constant.
-    """
-    z_coeff: Dict[int, float] = {}
-    offset = offset0
+def normalize_edges(n_vars: int, edges: Iterable[Edge]) -> List[Edge]:
+    result = set()
+    for i, j in edges:
+        if i == j: 
+            raise ValueError(f"Self-loop: {(i,j)}")
+        if not (0 <= i < n_vars and 0 <= j < n_vars): 
+            raise IndexError((i,j))
+        result.add((min(i,j), max(i,j)))
+    return sorted(result)
 
-    # linear terms a_i * x_i
-    for i, a_i in linear.items():
-        offset += a_i / 2.0
-        z_coeff[i] = z_coeff.get(i, 0.0) - a_i / 2.0
 
-    # quadratic terms b_ij * x_i * x_j
-    zz_terms: List[HamiltonianTerm] = []
-    for (i, j), b_ij in quadratic.items():
-        offset += b_ij / 4.0
-        z_coeff[i] = z_coeff.get(i, 0.0) - b_ij / 4.0
-        z_coeff[j] = z_coeff.get(j, 0.0) - b_ij / 4.0
-        zz_terms.append(HamiltonianTerm(coefficient=b_ij / 4.0, pauli="ZZ", qubits=(i, j)))
+def build_mis_qubo(n_vars, edges, alpha=1.0, beta=2.0):
+    if alpha <= 0 or beta <= alpha: 
+        raise ValueError("Exigir beta > alpha > 0")
+    edges = normalize_edges(n_vars, edges)
+    return ({i: -float(alpha) for i in range(n_vars)},
+            {edge: float(beta) for edge in edges}, 0.0)
 
-    z_terms = [
-        HamiltonianTerm(coefficient=coef, pauli="Z", qubits=(i,))
-        for i, coef in z_coeff.items()
-    ]
 
-    return z_terms + zz_terms, offset
+def qubo_to_ising(n_vars, linear, quadratic, offset0=0.0):
+    h, j, offset = {i: 0.0 for i in range(n_vars)}, {}, float(offset0)
+    
+    for i, a in linear.items():
+        offset += a / 2
+        h[i] -= a / 2
+        
+    for (i, k), b in quadratic.items():
+        offset += b / 4
+        h[i] -= b / 4
+        h[k] -= b / 4
+        j[(i,k)] = j.get((i,k), 0.0) + b / 4
+        
+    return IsingModel(n_vars, h, j, offset)
 
+
+def classical_cost(bits: Sequence[int], edges, alpha=1.0, beta=2.0):
+    x = np.asarray(bits, dtype=int)
+    if not np.isin(x, [0, 1]).all(): 
+        raise ValueError("Vetor nao binario")
+    return float(-alpha * x.sum() + beta * sum(x[i] * x[j] for i, j in edges))
+
+
+def conflicting_edges(bits, edges):
+    return [(i,j) for i, j in edges if bits[i] == bits[j] == 1]
