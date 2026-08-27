@@ -21,6 +21,7 @@ def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COB
     history = []
     
     def callback(eval_count, parameters, mean, metadata):
+        print(f"Iteração {eval_count} | Energia Quântica: {np.real(mean):.4f}")
         history.append({
             "evaluation": int(eval_count),
             "parameters": np.asarray(parameters).tolist(),
@@ -38,7 +39,7 @@ def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COB
                 
     raw = qaoa.compute_minimum_eigenvalue(model.to_sparse_pauli_op())
     
-    distribution = {int(k): float(np.real(v)) for k, v in dict(raw.eigenstate).items()}
+    distribution = {int(k, 2) if isinstance(k, str) else int(k): float(np.real(v)) for k, v in dict(raw.eigenstate).items()}
     energy = float(np.real(raw.eigenvalue))
     
     return QAOARunResult(
