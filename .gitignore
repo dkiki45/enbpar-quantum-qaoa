@@ -10,3 +10,5 @@ env/
 
 # O Mac costuma criar esse arquivo chato nas pastas
 .DS_Store
+
+explicacao_*.txt
