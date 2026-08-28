@@ -9,22 +9,29 @@ class Candidate:
     cost: float
     selected: int
     violations: list
+    selected_nodes: list
 
 def integer_to_bits(state, n_vars):
     displayed = format(int(state), f"0{n_vars}b") # q_(n-1)...q_0
     return [int(c) for c in reversed(displayed)] # x_0...x_(n-1)
 
-def decode_distribution(distribution, n_vars, edges, alpha=1.0, beta=2.0):
+def decode_distribution(distribution, n_vars, edges, nodes=None, alpha=1.0, beta=2.0):
     output = []
     for state, probability in distribution.items():
         bits = integer_to_bits(state, n_vars)
+
+        selected_geo = []
+        if nodes:
+            selected_geo = [nodes[i] for i, bit in enumerate(bits) if bit == 1]
+
         output.append(Candidate(
             format(int(state), f"0{n_vars}b"), 
             bits,
             float(probability), 
             classical_cost(bits, edges, alpha, beta),
             sum(bits), 
-            conflicting_edges(bits, edges)
+            conflicting_edges(bits, edges),
+            selected_geo
         ))
     return sorted(output, key=lambda c: (bool(c.violations), c.cost, -c.probability))
 

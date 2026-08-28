@@ -1,0 +1,49 @@
+{
+  "n_nodes": 10,
+  "n_edges": 5,
+  "reps": 2,
+  "shots": 8192,
+  "seed": 1024,
+  "expectation_ising": -2.1729736328125,
+  "expectation_qubo": -4.6729736328125,
+  "best": {
+    "bitstring": "0111011101",
+    "bits": [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "probability": 0.0272216796875,
+    "cost": -7.0,
+    "selected": 7,
+    "violations": [],
+    "selected_nodes": []
+  },
+  "exact_bits": [
+    1,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    0,
+    1
+  ],
+  "exact_cost": -7.0,
+  "cardinality_ratio": 1.0,
+  "parameters": {
+    "\u03b2[0]": 4.797180587270435,
+    "\u03b2[1]": 0.43550561092906753,
+    "\u03b3[0]": 3.5224030036525815,
+    "\u03b3[1]": -4.479537689472657
+  }
+}

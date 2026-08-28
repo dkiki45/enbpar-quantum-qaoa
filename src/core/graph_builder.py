@@ -13,6 +13,9 @@ def build_graph_from_csv(path, limit=None, radius_m=20., tolerance_factor=2.0):
     df = pd.read_csv(path).dropna(subset=["latitude", "longitude"]).copy()
     if limit is not None: 
         df = df.head(limit).copy()
+
+    if "id" not in df.columns:
+        df["id"] = df.index.astype(str)
         
     df = df.reset_index(drop=True)
     xy = df[["latitude", "longitude"]].to_numpy()
@@ -24,5 +27,7 @@ def build_graph_from_csv(path, limit=None, radius_m=20., tolerance_factor=2.0):
         for j in range(i+1, len(xy)):
             if haversine_m(*xy[i], *xy[j]) < threshold: 
                 edges.append((i, j))
+
+    nodes = df[["id", "latitude", "longitude"]].to_dict("records")
                 
-    return df.to_dict("records"), edges
+    return nodes, edges
