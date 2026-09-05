@@ -53,7 +53,7 @@ if __name__ == "__main__":
     csv_path = "src/data/paranainterativo.csv"
     shots = 1024
     seeds = list(range(1, 16)) 
-    depths = [1, 2, 3]
+    reps_list = [1, 2, 3]
 
     base_dir = Path(f"src/results/stress_n{limit_nodes}_{optimizer}")
     base_dir.mkdir(parents=True, exist_ok=True)
