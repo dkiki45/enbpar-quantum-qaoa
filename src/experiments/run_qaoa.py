@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     start_total = time.time()
 
-    for p in depths:
+    for p in reps_list:
         print(f"\n>> Starting Depth p={p}...")
         energies = []
         
