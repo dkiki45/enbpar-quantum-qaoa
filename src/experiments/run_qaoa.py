@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import time
 import statistics
+import warnings
 from pathlib import Path
 
 from core.graph_builder import build_graph_from_csv
@@ -13,12 +14,12 @@ from core.qaoa_solver import run_qaoa
 from core.solution_decoder import decode_distribution, best_feasible_candidate
 from core.classical_baseline import solve_exact_bruteforce
 
-def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_name="COBYLA"):
+def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_name="COBYLA", max_iter=300):
     nodes, edges = build_graph_from_csv(csv_path, limit)
     linear, quadratic, off = build_mis_qubo(len(nodes), edges)
     model = qubo_to_ising(len(nodes), linear, quadratic, off)
     
-    result = run_qaoa(model, reps, shots, seed, maxiter=300, optimizer_name=optimizer_name)
+    result = run_qaoa(model, reps, shots, seed, maxiter=max_iter, optimizer_name=optimizer_name)
     candidates = decode_distribution(result.distribution, len(nodes), edges, nodes=nodes)
     best = best_feasible_candidate(candidates)
     
@@ -46,9 +47,11 @@ def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_na
     return summary, result.history
 
 if __name__ == "__main__":
+    warnings.filterwarnings("ignore")
     optimizer = sys.argv[1].upper() if len(sys.argv) > 1 else "COBYLA"
+    limite_iteracoes = 100 if optimizer == "SPSA" else 300
     
-    limit_nodes = 15  
+    limit_nodes = 10  
 
     csv_path = "src/data/paranainterativo.csv"
     shots = 1024
@@ -78,7 +81,8 @@ if __name__ == "__main__":
                 reps=p, 
                 shots=shots, 
                 seed=s,
-                optimizer_name=optimizer
+                optimizer_name=optimizer,
+                max_iter=limite_iteracoes
             )
             energies.append(summary["expectation_qubo"])
             print(f"  - Seed {s:02d} completed | Energy: {summary['expectation_qubo']:.4f}")
