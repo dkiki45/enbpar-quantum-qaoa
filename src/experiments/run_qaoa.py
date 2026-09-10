@@ -2,6 +2,11 @@ import json
 import matplotlib.pyplot as plt
 from dataclasses import asdict
 from pathlib import Path
+import sys
+import time
+import statistics
+import warnings
+from pathlib import Path
 
 from core.graph_builder import build_graph_from_csv
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
@@ -9,12 +14,12 @@ from core.qaoa_solver import run_qaoa
 from core.solution_decoder import decode_distribution, best_feasible_candidate
 from core.classical_baseline import solve_exact_bruteforce
 
-def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_name="COBYLA"):
+def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_name="COBYLA", max_iter=300):
     nodes, edges = build_graph_from_csv(csv_path, limit)
     linear, quadratic, off = build_mis_qubo(len(nodes), edges)
     model = qubo_to_ising(len(nodes), linear, quadratic, off)
     
-    result = run_qaoa(model, reps, shots, seed, maxiter=300, optimizer_name=optimizer_name)
+    result = run_qaoa(model, reps, shots, seed, maxiter=max_iter, optimizer_name=optimizer_name)
     candidates = decode_distribution(result.distribution, len(nodes), edges, nodes=nodes)
     best = best_feasible_candidate(candidates)
     
@@ -42,38 +47,49 @@ def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_na
     return summary, result.history
 
 if __name__ == "__main__":
-    from pathlib import Path
-    import matplotlib.pyplot as plt
+    warnings.filterwarnings("ignore")
+    optimizer = sys.argv[1].upper() if len(sys.argv) > 1 else "COBYLA"
+    limite_iteracoes = 100 if optimizer == "SPSA" else 300
+    
+    limit_nodes = 10  
 
-    # Configuração Campeã da Fase P1
     csv_path = "src/data/paranainterativo.csv"
-    pasta_destino = "src/results/qaoa_final_p1"
-    
-    print("\n--- Iniciando Execução Mestra (QAOA) ---")
-    
-    summary, history = execute(
-        csv_path=csv_path, 
-        output=pasta_destino, 
-        limit=10,          # Expandindo a área da rede
-        reps=1,            # Melhor profundidade validada
-        shots=8192, 
-        seed=42,
-        optimizer_name="COBYLA" # Melhor otimizador para simulador
-    )
-    
-    # Gerar o gráfico limpo da execução final
-    plt.figure(figsize=(10, 6))
-    plt.plot(
-        [h["evaluation"] for h in history], 
-        [h["expectation_qubo"] for h in history], 
-        marker='o', linestyle='-', color='#2ca02c', linewidth=2
-    )
-    plt.title("Convergência Final QAOA (COBYLA, p=1)", fontsize=14)
-    plt.xlabel("Iterações", fontsize=12)
-    plt.ylabel("Energia Esperada", fontsize=12)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    
-    plt.savefig(Path(pasta_destino) / "convergencia_final.png", dpi=300, bbox_inches='tight')
-    
-    print(f"\nSucesso Absoluto! Razão de Aproximação: {summary['cardinality_ratio']:.2f}")
-    print(f"Postes selecionados e geodados salvos em: {pasta_destino}/summary.json")
+    shots = 1024
+    seeds = list(range(1, 16)) 
+    reps_list = [1, 2, 3]
+
+    base_dir = Path(f"src/results/stress_n{limit_nodes}_{optimizer}")
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"\n{'='*50}")
+    print(f"STRESS TEST: {limit_nodes} NODES | OPTIMIZER: {optimizer}")
+    print(f"{'='*50}")
+
+    start_total = time.time()
+
+    for p in reps_list:
+        print(f"\n>> Starting Depth p={p}...")
+        energies = []
+        
+        for s in seeds:
+            target_dir = base_dir / f"p{p}_seed{s}"
+            
+            summary, _ = execute(
+                csv_path=csv_path, 
+                output=str(target_dir), 
+                limit=limit_nodes, 
+                reps=p, 
+                shots=shots, 
+                seed=s,
+                optimizer_name=optimizer,
+                max_iter=limite_iteracoes
+            )
+            energies.append(summary["expectation_qubo"])
+            print(f"  - Seed {s:02d} completed | Energy: {summary['expectation_qubo']:.4f}")
+        
+        mean_energy = statistics.mean(energies)
+        std_dev = statistics.stdev(energies)
+        print(f" SUMMARY {optimizer} (p={p}) -> Mean: {mean_energy:.4f} | Std Dev: {std_dev:.4f}")
+
+    total_time = (time.time() - start_total) / 60
+    print(f"\n {optimizer} COMPLETED IN {total_time:.2f} MINUTES.")
