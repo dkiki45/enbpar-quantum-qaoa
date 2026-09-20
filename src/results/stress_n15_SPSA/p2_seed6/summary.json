@@ -1,0 +1,105 @@
+{
+  "n_nodes": 15,
+  "n_edges": 9,
+  "reps": 2,
+  "shots": 1024,
+  "seed": 6,
+  "expectation_ising": -3.18359375,
+  "expectation_qubo": -6.18359375,
+  "best": {
+    "bitstring": "110010111001101",
+    "bits": [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      1
+    ],
+    "probability": 0.005859375,
+    "cost": -9.0,
+    "selected": 9,
+    "violations": [],
+    "selected_nodes": [
+      {
+        "id": "0",
+        "latitude": -25.447316,
+        "longitude": -49.257356
+      },
+      {
+        "id": "2",
+        "latitude": -25.448318,
+        "longitude": -49.255791
+      },
+      {
+        "id": "3",
+        "latitude": -25.448207,
+        "longitude": -49.256369
+      },
+      {
+        "id": "6",
+        "latitude": -25.448582,
+        "longitude": -49.256741
+      },
+      {
+        "id": "7",
+        "latitude": -25.447551,
+        "longitude": -49.249
+      },
+      {
+        "id": "8",
+        "latitude": -25.448364,
+        "longitude": -49.249048
+      },
+      {
+        "id": "10",
+        "latitude": -25.447321,
+        "longitude": -49.252444
+      },
+      {
+        "id": "13",
+        "latitude": -25.448106,
+        "longitude": -49.256977
+      },
+      {
+        "id": "14",
+        "latitude": -25.448737,
+        "longitude": -49.257684
+      }
+    ]
+  },
+  "exact_bits": [
+    1,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1
+  ],
+  "exact_cost": -9.0,
+  "cardinality_ratio": 1.0,
+  "parameters": {
+    "\u03b2[0]": 5.163768872146311,
+    "\u03b2[1]": 4.6952560446799305,
+    "\u03b3[0]": -7.247131277166101,
+    "\u03b3[1]": -4.883807904493306
+  }
+}

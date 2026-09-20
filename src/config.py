@@ -5,7 +5,7 @@ from pathlib import Path
 # ==========================================
 
 # 1. GRAPH PARAMETERS (Memory bound)
-LIMIT_NODES = 10  
+LIMIT_NODES = 15  
 CSV_PATH = "src/data/paranainterativo.csv"
 
 # 2. STATISTICAL PARAMETERS 

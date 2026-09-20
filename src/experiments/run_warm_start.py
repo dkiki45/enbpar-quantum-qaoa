@@ -72,7 +72,7 @@ def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, sho
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     optimizer = sys.argv[1].upper() if len(sys.argv) > 1 else "COBYLA"
-    max_iterations = 100 if optimizer == "SPSA" else 300
+    max_iterations = 300
     
     json_path = RESULTS_BASE_DIR / "v3_grid_search" / "warm_start.json"
     try:
