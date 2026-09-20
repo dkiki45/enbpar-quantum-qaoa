@@ -1,0 +1,123 @@
+{
+  "n_nodes": 20,
+  "n_edges": 14,
+  "reps": 1,
+  "shots": 1024,
+  "seed": 10,
+  "expectation_ising": -0.7529296875,
+  "expectation_qubo": -3.7529296875,
+  "best": {
+    "bitstring": "00101110010111001101",
+    "bits": [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0
+    ],
+    "probability": 0.0009765625,
+    "cost": -11.0,
+    "selected": 11,
+    "violations": [],
+    "selected_nodes": [
+      {
+        "id": "0",
+        "latitude": -25.447316,
+        "longitude": -49.257356
+      },
+      {
+        "id": "2",
+        "latitude": -25.448318,
+        "longitude": -49.255791
+      },
+      {
+        "id": "3",
+        "latitude": -25.448207,
+        "longitude": -49.256369
+      },
+      {
+        "id": "6",
+        "latitude": -25.448582,
+        "longitude": -49.256741
+      },
+      {
+        "id": "7",
+        "latitude": -25.447551,
+        "longitude": -49.249
+      },
+      {
+        "id": "8",
+        "latitude": -25.448364,
+        "longitude": -49.249048
+      },
+      {
+        "id": "10",
+        "latitude": -25.447321,
+        "longitude": -49.252444
+      },
+      {
+        "id": "13",
+        "latitude": -25.448106,
+        "longitude": -49.256977
+      },
+      {
+        "id": "14",
+        "latitude": -25.448737,
+        "longitude": -49.257684
+      },
+      {
+        "id": "15",
+        "latitude": -25.447521,
+        "longitude": -49.25785
+      },
+      {
+        "id": "17",
+        "latitude": -25.448288,
+        "longitude": -49.257819
+      }
+    ]
+  },
+  "exact_bits": [
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0,
+    1
+  ],
+  "exact_cost": -12.0,
+  "cardinality_ratio": 0.9166666666666666,
+  "parameters": {
+    "\u03b2[0]": 4.410110440271145,
+    "\u03b3[0]": -3.3978421182850385
+  }
+}
