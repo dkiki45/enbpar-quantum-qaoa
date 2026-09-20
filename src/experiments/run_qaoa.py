@@ -46,19 +46,22 @@ def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_na
     
     return summary, result.history
 
+import config
+
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     optimizer = sys.argv[1].upper() if len(sys.argv) > 1 else "COBYLA"
-    limite_iteracoes = 100 if optimizer == "SPSA" else 300
+    limite_iteracoes = 300
     
-    limit_nodes = 10  
+    # Puxando dinamicamente do config.py
+    limit_nodes = config.LIMIT_NODES
+    csv_path = config.CSV_PATH
+    shots = config.SHOTS_PER_EVAL
+    seeds = config.SEEDS_TO_TEST
+    reps_list = config.DEPTHS_STANDARD
 
-    csv_path = "src/data/paranainterativo.csv"
-    shots = 1024
-    seeds = list(range(1, 16)) 
-    reps_list = [1, 2, 3]
-
-    base_dir = Path(f"src/results/stress_n{limit_nodes}_{optimizer}")
+    # Usando o diretório base do config
+    base_dir = config.RESULTS_BASE_DIR / f"stress_n{limit_nodes}_{optimizer}"
     base_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*50}")

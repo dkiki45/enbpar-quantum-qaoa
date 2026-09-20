@@ -8,7 +8,7 @@ from scipy.optimize import OptimizeResult
 
 from core.graph_builder import build_graph_from_csv
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
-from qiskit.primitives import StatevectorSampler
+from core.qaoa_solver import GridSearchSampler
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import Optimizer  
 
@@ -43,7 +43,8 @@ def run_grid_search_p1(csv_path, output_dir, limit=10):
     gammas = np.linspace(0, 2 * np.pi, gamma_steps)
     
     energy_landscape = np.zeros((beta_steps, gamma_steps))
-    sampler = StatevectorSampler(default_shots=1024)
+    sampler = GridSearchSampler()
+    sampler.options.default_shots = 1024
     
     dummy_opt = DummyEvaluator()
     qaoa = QAOA(sampler=sampler, optimizer=dummy_opt, reps=1)
@@ -106,7 +107,8 @@ def run_grid_search_p2(csv_path, output_dir, p1_data, limit=10):
     gammas = np.linspace(0, 2 * np.pi, gamma_steps)
     
     energy_landscape = np.zeros((beta_steps, gamma_steps))
-    sampler = StatevectorSampler(default_shots=1024)
+    sampler = GridSearchSampler()
+    sampler.options.default_shots = 1024
     
     dummy_opt = DummyEvaluator()
     qaoa = QAOA(sampler=sampler, optimizer=dummy_opt, reps=2)
