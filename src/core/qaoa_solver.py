@@ -131,7 +131,7 @@ def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COB
         })
 
     # qiskit aer
-    sampler = FastAerSampler()
+    sampler = FastAerSampler(options={"backend_options": {"method": "matrix_product_state"}})
     sampler.options.default_shots = shots
     sampler.options.seed_simulator = seed
 
