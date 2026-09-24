@@ -1,0 +1,25 @@
+# enbpar-quantum-qaoa — Project dependencies:
+# Tested on Python 3.11 (pytest: 3 passed). Recommended Python >= 3.10.
+#
+# Installation:
+#   python -m venv .venv
+#   source .venv/bin/activate        # Windows: .venv\Scripts\activate
+#   pip install -r requirements.txt
+#
+# Execution:
+#   PYTHONPATH=src python src/experiments/run_qaoa.py
+#   PYTHONPATH=src pytest
+
+# --- Quantum Computing ---
+qiskit==2.5.2              # QuantumCircuit, transpile, SparsePauliOp, Statevector, SamplerPub
+qiskit-aer==0.17.2         # qiskit_aer.primitives.SamplerV2
+qiskit-algorithms==0.4.0   # QAOA, COBYLA, SPSA, Optimizer
+
+# --- data/Scientific ---
+numpy==2.4.6
+scipy==1.17.1              # scipy.optimize.OptimizeResult (grid_search.py)
+pandas==3.0.6              # leitura do CSV (graph_builder.py)
+matplotlib==3.11.2         # gráficos (run_qaoa.py, grid_search.py, plot_analysis.py)
+
+# --- Testing ---
+pytest==9.1.1
