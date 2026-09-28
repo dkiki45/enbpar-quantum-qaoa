@@ -17,9 +17,10 @@ qiskit-algorithms==0.4.0   # QAOA, COBYLA, SPSA, Optimizer
 
 # --- data/Scientific ---
 numpy==2.4.6
-scipy==1.17.1              # scipy.optimize.OptimizeResult (grid_search.py)
+scipy==1.17.1              # OptimizeResult (grid_search.py), milp exact solver (classical_baseline.py)
 pandas==3.0.6              # leitura do CSV (graph_builder.py)
 matplotlib==3.11.2         # gráficos (run_qaoa.py, grid_search.py, plot_analysis.py)
+networkx==3.6.1            # graph_visualization.py
 
 # --- Testing ---
 pytest==9.1.1
