@@ -10,7 +10,7 @@ from core.graph_builder import build_graph_from_csv
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.qaoa_solver import run_qaoa
 from core.solution_decoder import decode_distribution, best_feasible_candidate
-from core.classical_baseline import solve_exact_bruteforce
+from core.classical_baseline import solve_exact_ilp
 from config import LIMIT_NODES, CSV_PATH, SHOTS_PER_EVAL, SEEDS_TO_TEST, DEPTHS_WARM_START, RESULTS_BASE_DIR
 
 def build_warm_start_point(p, warm_start_data):
@@ -48,7 +48,7 @@ def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, sho
     
     candidates = decode_distribution(result.distribution, len(nodes), edges, nodes=nodes)
     best = best_feasible_candidate(candidates)
-    exact_bits, exact_cost = solve_exact_bruteforce(len(nodes), edges)
+    exact_bits, exact_cost = solve_exact_ilp(len(nodes), edges)
     
     summary = {
         "n_nodes": len(nodes), 

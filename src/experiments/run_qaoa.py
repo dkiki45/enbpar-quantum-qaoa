@@ -12,7 +12,7 @@ from core.graph_builder import build_graph_from_csv
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.qaoa_solver import run_qaoa
 from core.solution_decoder import decode_distribution, best_feasible_candidate
-from core.classical_baseline import solve_exact_bruteforce
+from core.classical_baseline import solve_exact_ilp
 from core.graph_visualization import plot_graph
 
 def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_name="COBYLA", max_iter=300):
@@ -36,13 +36,8 @@ def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_na
     '''
     #plot_graph(nodes, edges, selected_bits=best.bits, layout="geographic") #layout: geographic / spring
     
-    '''
-    #IMPORTANT: The brute force sometimes causes the code to freeze (probably because some expensive operation)
-    '''
-    #exact_bits, exact_cost = solve_exact_bruteforce(len(nodes), edges)
-    
-    exact_bits = []
-    exact_cost = 0
+    # Exact optimum via ILP (brute force is 2^n and freezes for n >= ~25)
+    exact_bits, exact_cost = solve_exact_ilp(len(nodes), edges)
     
     summary = {
         "n_nodes": len(nodes), 
