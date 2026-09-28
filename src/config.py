@@ -21,7 +21,7 @@ DEPTHS_WARM_START = [3, 4, 5]
 
 # Aer simulation method: "statevector" (exact, RAM = 16 bytes * 2^n -> up to 32 qubits on 128 GB)
 # or "matrix_product_state" (exact, memory depends on entanglement -> can go beyond 32 qubits)
-SIMULATION_METHOD = "statevector"
+SIMULATION_METHOD = "matrix_product_state"
 
 # 4. OPTIMIZERS
 AVAILABLE_OPTIMIZERS = ["COBYLA", "SPSA"]
