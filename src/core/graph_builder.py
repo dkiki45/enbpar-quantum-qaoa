@@ -60,7 +60,7 @@ def select_connected_subgraph(
     return new_nodes, new_edges, mapping
 
 
-def build_graph_from_csv(path, limit=None, radius_m=20., tolerance_factor=2.0):
+def build_graph_from_csv(path, limit=None, start_node=None, radius_m=20., tolerance_factor=2.0):
     df = pd.read_csv(path).dropna(subset=["latitude", "longitude"]).copy()
     
     #If we want a random selection, here is the code. 
@@ -86,6 +86,12 @@ def build_graph_from_csv(path, limit=None, radius_m=20., tolerance_factor=2.0):
 
     nodes = df[["id", "latitude", "longitude"]].to_dict("records")
 
-    nodes, edges, mapping = select_connected_subgraph(nodes, edges, seed_node=limit, n_nodes=30)
+    # Defaults come from config.py so every script uses the same subgraph
+    if start_node is None:
+        from config import START_NODE
+        start_node = START_NODE
+    n_nodes = limit if limit is not None else len(nodes)
+
+    nodes, edges, mapping = select_connected_subgraph(nodes, edges, seed_node=start_node, n_nodes=n_nodes)
                 
     return nodes, edges

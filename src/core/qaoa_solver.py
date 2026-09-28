@@ -114,7 +114,7 @@ class GridSearchSampler(FastAerSampler):
         # the original (buggy) caching logic would run a second time
         return SamplerV2.run(self, new_pubs, **kwargs)
 
-def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COBYLA", initial_point=None):
+def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COBYLA", initial_point=None, sim_method=None):
     if min(reps, shots, maxiter) < 1: 
         raise ValueError("Parametros invalidos")
         
@@ -131,7 +131,11 @@ def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COB
         })
 
     # qiskit aer
-    sampler = FastAerSampler(options={"backend_options": {"method": "matrix_product_state"}})
+    # Simulation method defaults to config.SIMULATION_METHOD ("statevector" or "matrix_product_state")
+    if sim_method is None:
+        from config import SIMULATION_METHOD
+        sim_method = SIMULATION_METHOD
+    sampler = FastAerSampler(options={"backend_options": {"method": sim_method}})
     sampler.options.default_shots = shots
     sampler.options.seed_simulator = seed
 
