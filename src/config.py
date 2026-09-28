@@ -5,7 +5,8 @@ from pathlib import Path
 # ==========================================
 
 # 1. GRAPH PARAMETERS (Memory bound)
-LIMIT_NODES = 30
+LIMIT_NODES = 30        # Number of nodes in the subgraph = number of qubits
+START_NODE = 30         # CSV index of the node where the connected subgraph selection (BFS) starts
 CSV_PATH = "src/data/paranainterativo.csv"
 
 # 2. STATISTICAL PARAMETERS 
@@ -17,6 +18,10 @@ SEEDS_TO_TEST = list(range(1,5))
 DEPTHS_STANDARD = [1, 2, 3]
 # Depths for the guided test (Warm-Start)
 DEPTHS_WARM_START = [3, 4, 5]
+
+# Aer simulation method: "statevector" (exact, RAM = 16 bytes * 2^n -> up to 32 qubits on 128 GB)
+# or "matrix_product_state" (exact, memory depends on entanglement -> can go beyond 32 qubits)
+SIMULATION_METHOD = "statevector"
 
 # 4. OPTIMIZERS
 AVAILABLE_OPTIMIZERS = ["COBYLA", "SPSA"]
