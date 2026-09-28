@@ -4,8 +4,8 @@
   "reps": 1,
   "shots": 1024,
   "seed": 1,
-  "expectation_ising": -0.875,
-  "expectation_qubo": -3.375,
+  "expectation_ising": -0.701171875,
+  "expectation_qubo": -3.201171875,
   "best": {
     "bitstring": "0111011101",
     "bits": [
@@ -77,7 +77,7 @@
   "exact_cost": -7.0,
   "cardinality_ratio": 1.0,
   "parameters": {
-    "\u03b2[0]": 5.090244403174868,
-    "\u03b3[0]": -1.5925773794016713
+    "\u03b2[0]": 2.035538274876483,
+    "\u03b3[0]": -1.5402455781128774
   }
 }

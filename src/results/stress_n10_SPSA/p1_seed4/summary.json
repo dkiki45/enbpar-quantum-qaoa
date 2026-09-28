@@ -4,10 +4,10 @@
   "reps": 1,
   "shots": 1024,
   "seed": 4,
-  "expectation_ising": -0.841796875,
-  "expectation_qubo": -3.341796875,
+  "expectation_ising": 0.6611328125,
+  "expectation_qubo": -1.8388671875,
   "best": {
-    "bitstring": "0111011101",
+    "bitstring": "1011011101",
     "bits": [
       1,
       0,
@@ -17,10 +17,10 @@
       0,
       1,
       1,
-      1,
-      0
+      0,
+      1
     ],
-    "probability": 0.0029296875,
+    "probability": 0.001953125,
     "cost": -7.0,
     "selected": 7,
     "violations": [],
@@ -56,9 +56,9 @@
         "longitude": -49.249
       },
       {
-        "id": "8",
-        "latitude": -25.448364,
-        "longitude": -49.249048
+        "id": "9",
+        "latitude": -25.448087,
+        "longitude": -49.249281
       }
     ]
   },
@@ -77,7 +77,7 @@
   "exact_cost": -7.0,
   "cardinality_ratio": 1.0,
   "parameters": {
-    "\u03b2[0]": 1.900852762750677,
-    "\u03b3[0]": -1.8458236864239241
+    "\u03b2[0]": 5.265459687480257,
+    "\u03b3[0]": 3.155048698850227
   }
 }

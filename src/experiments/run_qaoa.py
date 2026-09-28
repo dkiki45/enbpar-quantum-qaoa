@@ -13,17 +13,36 @@ from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.qaoa_solver import run_qaoa
 from core.solution_decoder import decode_distribution, best_feasible_candidate
 from core.classical_baseline import solve_exact_bruteforce
+from core.graph_visualization import plot_graph
 
 def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_name="COBYLA", max_iter=300):
     nodes, edges = build_graph_from_csv(csv_path, limit)
+
+    '''
+    #If we want to see the generated graph before QAOA run
+    '''
+    #plot_graph(nodes, edges, layout="geographic") #layout: geographic / spring
+   
+
     linear, quadratic, off = build_mis_qubo(len(nodes), edges)
     model = qubo_to_ising(len(nodes), linear, quadratic, off)
     
     result = run_qaoa(model, reps, shots, seed, maxiter=max_iter, optimizer_name=optimizer_name)
     candidates = decode_distribution(result.distribution, len(nodes), edges, nodes=nodes)
     best = best_feasible_candidate(candidates)
+
+    '''
+    #Plot the best solution found in the execution
+    '''
+    #plot_graph(nodes, edges, selected_bits=best.bits, layout="geographic") #layout: geographic / spring
     
-    exact_bits, exact_cost = solve_exact_bruteforce(len(nodes), edges)
+    '''
+    #IMPORTANT: The brute force sometimes causes the code to freeze (probably because some expensive operation)
+    '''
+    #exact_bits, exact_cost = solve_exact_bruteforce(len(nodes), edges)
+    
+    exact_bits = []
+    exact_cost = 0
     
     summary = {
         "n_nodes": len(nodes), 

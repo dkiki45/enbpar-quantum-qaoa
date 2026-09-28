@@ -1,0 +1,117 @@
+{
+  "n_nodes": 30,
+  "n_edges": 42,
+  "reps": 1,
+  "shots": 1024,
+  "seed": 4,
+  "expectation_ising": -11.7666015625,
+  "expectation_qubo": -5.7666015625,
+  "best": {
+    "bitstring": "111000011010000110000011100001",
+    "bits": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "probability": 0.0009765625,
+    "cost": -12.0,
+    "selected": 12,
+    "violations": [],
+    "selected_nodes": [
+      {
+        "id": "30",
+        "latitude": -25.450495,
+        "longitude": -49.257479
+      },
+      {
+        "id": "128",
+        "latitude": -25.450471,
+        "longitude": -49.256913
+      },
+      {
+        "id": "100",
+        "latitude": -25.450537,
+        "longitude": -49.257906
+      },
+      {
+        "id": "27",
+        "latitude": -25.450003,
+        "longitude": -49.257815
+      },
+      {
+        "id": "93",
+        "latitude": -25.449799,
+        "longitude": -49.256604
+      },
+      {
+        "id": "142",
+        "latitude": -25.450404,
+        "longitude": -49.25586
+      },
+      {
+        "id": "35",
+        "latitude": -25.450453,
+        "longitude": -49.255432
+      },
+      {
+        "id": "12",
+        "latitude": -25.448924,
+        "longitude": -49.256697
+      },
+      {
+        "id": "37",
+        "latitude": -25.450319,
+        "longitude": -49.254797
+      },
+      {
+        "id": "158",
+        "latitude": -25.44873,
+        "longitude": -49.257037
+      },
+      {
+        "id": "156",
+        "latitude": -25.448548,
+        "longitude": -49.256155
+      },
+      {
+        "id": "4",
+        "latitude": -25.44815,
+        "longitude": -49.256907
+      }
+    ]
+  },
+  "exact_bits": [],
+  "exact_cost": 0,
+  "cardinality_ratio": 0.0,
+  "parameters": {
+    "\u03b2[0]": 2.6239386136464438,
+    "\u03b3[0]": 0.31741385961762203
+  }
+}

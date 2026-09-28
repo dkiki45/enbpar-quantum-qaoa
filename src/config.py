@@ -5,12 +5,12 @@ from pathlib import Path
 # ==========================================
 
 # 1. GRAPH PARAMETERS (Memory bound)
-LIMIT_NODES = 35  
+LIMIT_NODES = 30
 CSV_PATH = "src/data/paranainterativo.csv"
 
 # 2. STATISTICAL PARAMETERS 
 SHOTS_PER_EVAL = 1024
-SEEDS_TO_TEST = list(range(1, 16))  
+SEEDS_TO_TEST = list(range(1,5))  
 
 # 3. CIRCUIT PARAMETERS
 # Depths for the blind test (Random initialization)

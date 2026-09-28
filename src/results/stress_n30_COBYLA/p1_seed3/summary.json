@@ -1,0 +1,112 @@
+{
+  "n_nodes": 30,
+  "n_edges": 42,
+  "reps": 1,
+  "shots": 1024,
+  "seed": 3,
+  "expectation_ising": -11.8916015625,
+  "expectation_qubo": -5.8916015625,
+  "best": {
+    "bitstring": "010001010000011001110001100001",
+    "bits": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    "probability": 0.0009765625,
+    "cost": -11.0,
+    "selected": 11,
+    "violations": [],
+    "selected_nodes": [
+      {
+        "id": "30",
+        "latitude": -25.450495,
+        "longitude": -49.257479
+      },
+      {
+        "id": "128",
+        "latitude": -25.450471,
+        "longitude": -49.256913
+      },
+      {
+        "id": "100",
+        "latitude": -25.450537,
+        "longitude": -49.257906
+      },
+      {
+        "id": "28",
+        "latitude": -25.449742,
+        "longitude": -49.257898
+      },
+      {
+        "id": "92",
+        "latitude": -25.450096,
+        "longitude": -49.25658
+      },
+      {
+        "id": "143",
+        "latitude": -25.450417,
+        "longitude": -49.256208
+      },
+      {
+        "id": "94",
+        "latitude": -25.449519,
+        "longitude": -49.256638
+      },
+      {
+        "id": "141",
+        "latitude": -25.450373,
+        "longitude": -49.255512
+      },
+      {
+        "id": "37",
+        "latitude": -25.450319,
+        "longitude": -49.254797
+      },
+      {
+        "id": "66",
+        "latitude": -25.448673,
+        "longitude": -49.25679
+      },
+      {
+        "id": "156",
+        "latitude": -25.448548,
+        "longitude": -49.256155
+      }
+    ]
+  },
+  "exact_bits": [],
+  "exact_cost": 0,
+  "cardinality_ratio": 0.0,
+  "parameters": {
+    "\u03b2[0]": 2.7031720490835274,
+    "\u03b3[0]": -5.943475649124518
+  }
+}

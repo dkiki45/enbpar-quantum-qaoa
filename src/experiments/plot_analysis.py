@@ -23,11 +23,11 @@ if __name__ == "__main__":
     print("Loading datasets...")
     
     # Extract data for all 4 scenarios
-    c_stress_e, c_stress_p = get_metrics("stress_n20_COBYLA", p, seeds)
-    c_warm_e, c_warm_p = get_metrics("warm_start_n20_COBYLA", p, seeds)
-    s_stress_e, s_stress_p = get_metrics("stress_n20_SPSA", p, seeds)
-    s_warm_e, s_warm_p = get_metrics("warm_start_n20_SPSA", p, seeds)
-    
+    c_stress_e, c_stress_p = get_metrics("stress_n10_COBYLA", p, seeds)
+    c_warm_e, c_warm_p = get_metrics("warm_start_n10_COBYLA", p, seeds)
+    s_stress_e, s_stress_p = get_metrics("stress_n10_SPSA", p, seeds)
+    s_warm_e, s_warm_p = get_metrics("warm_start_n10_SPSA", p, seeds)
+
     # Safety check
     if not s_warm_e:
         print("Warning: SPSA Warm-Start data not found yet. Please wait for the terminal to finish!")
