@@ -23,6 +23,10 @@ DEPTHS_WARM_START = [3, 4, 5]
 # or "matrix_product_state" (exact, memory depends on entanglement -> can go beyond 32 qubits)
 SIMULATION_METHOD = "matrix_product_state"
 
+# Skip (seed, depth) runs that already have a summary.json, so an interrupted
+# experiment resumes where it stopped. Delete the results folder to rerun from scratch.
+SKIP_COMPLETED_RUNS = True
+
 # 4. OPTIMIZERS
 AVAILABLE_OPTIMIZERS = ["COBYLA", "SPSA"]
 
