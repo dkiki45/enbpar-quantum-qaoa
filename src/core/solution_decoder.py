@@ -40,3 +40,14 @@ def best_feasible_candidate(candidates):
     if not feasible: 
         raise RuntimeError("Nenhuma amostra factivel")
     return feasible[0]
+
+
+def best_feasible_or_none(candidates):
+    """Like best_feasible_candidate, but returns None instead of raising when
+    no sampled bitstring is a valid independent set (e.g. the optimizer got stuck)."""
+    feasible = [c for c in candidates if not c.violations]
+    return feasible[0] if feasible else None
+
+def feasible_probability(candidates):
+    """Total sampled probability mass on valid independent sets (0.0 to 1.0)."""
+    return float(sum(c.probability for c in candidates if not c.violations))
