@@ -9,9 +9,9 @@ from dataclasses import asdict
 from core.graph_builder import build_graph_from_csv
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.qaoa_solver import run_qaoa
-from core.solution_decoder import decode_distribution, best_feasible_candidate
+from core.solution_decoder import decode_distribution, best_feasible_or_none, feasible_probability
 from core.classical_baseline import solve_exact_ilp
-from config import LIMIT_NODES, CSV_PATH, SHOTS_PER_EVAL, SEEDS_TO_TEST, DEPTHS_WARM_START, RESULTS_BASE_DIR
+from config import LIMIT_NODES, CSV_PATH, SHOTS_PER_EVAL, SEEDS_TO_TEST, DEPTHS_WARM_START, RESULTS_BASE_DIR, SKIP_COMPLETED_RUNS
 
 def build_warm_start_point(p, warm_start_data):
     """
@@ -47,7 +47,10 @@ def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, sho
     )
     
     candidates = decode_distribution(result.distribution, len(nodes), edges, nodes=nodes)
-    best = best_feasible_candidate(candidates)
+    # None when no sample is a valid independent set (optimizer stuck / barren plateau)
+    best = best_feasible_or_none(candidates)
+    if best is None:
+        print(f"    [WARNING] No feasible sample for p={p_depth}, seed={seed} (energy {result.expectation_qubo:.4f})")
     exact_bits, exact_cost = solve_exact_ilp(len(nodes), edges)
     
     summary = {
@@ -57,7 +60,9 @@ def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, sho
         "shots": shots, 
         "seed": seed, 
         "expectation_qubo": result.expectation_qubo, 
-        "best": asdict(best),
+        "feasible": best is not None,
+        "feasible_probability": feasible_probability(candidates),
+        "best": asdict(best) if best is not None else None,
         "exact_cost": exact_cost,
         "parameters": result.optimal_parameters,
         "warm_start_used": initial_pt
@@ -94,9 +99,17 @@ if __name__ == "__main__":
     for p in DEPTHS_WARM_START:  
         print(f"\n>> Starting Depth p={p} with Warm-Start...")
         energies = []
+        infeasible = 0
         
         for s in SEEDS_TO_TEST:
             target_dir = base_dir / f"p{p}_seed{s}"
+            summary_path = target_dir / "summary.json"
+            if SKIP_COMPLETED_RUNS and summary_path.exists():
+                summary = json.loads(summary_path.read_text(encoding="utf-8"))
+                print(f"  - Seed {s:02d} already done, loaded from {summary_path}")
+                energies.append(summary["expectation_qubo"])
+                infeasible += 0 if summary.get("feasible", True) else 1
+                continue
             summary = execute_warm_start(
                 csv_path=CSV_PATH, 
                 output=str(target_dir), 
@@ -109,11 +122,13 @@ if __name__ == "__main__":
                 max_iter=max_iterations
             )
             energies.append(summary["expectation_qubo"])
-            print(f"  - Seed {s:02d} completed | Energy: {summary['expectation_qubo']:.4f}")
+            feasible = summary.get("feasible", True)
+            infeasible += 0 if feasible else 1
+            print(f"  - Seed {s:02d} completed | Energy: {summary['expectation_qubo']:.4f} | Feasible: {feasible}")
         
         mean_energy = statistics.mean(energies)
         std_dev = statistics.stdev(energies)
-        print(f" SUMMARY {optimizer} (p={p}) -> Mean: {mean_energy:.4f} | Std Dev: {std_dev:.4f}")
+        print(f" SUMMARY {optimizer} (p={p}) -> Mean: {mean_energy:.4f} | Std Dev: {std_dev:.4f} | Infeasible seeds: {infeasible}/{len(SEEDS_TO_TEST)}")
 
     total_time = (time.time() - start_total) / 60
     print(f"\n {optimizer} WARM-START COMPLETED IN {total_time:.2f} MINUTES.")

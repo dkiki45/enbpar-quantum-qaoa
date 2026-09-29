@@ -12,7 +12,8 @@ def get_metrics(folder_prefix, p_depth, num_seeds):
             with open(path, "r") as f:
                 data = json.load(f)
                 energies.append(data["expectation_qubo"])
-                probabilities.append(data["best"]["probability"])
+                # "best" is None when the run found no feasible sample
+                probabilities.append(data["best"]["probability"] if data.get("best") else 0.0)
     
     return energies, probabilities
 
