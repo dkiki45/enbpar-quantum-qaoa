@@ -17,7 +17,7 @@ SEEDS_TO_TEST = list(range(1,5))
 # Depths for the blind test (Random initialization)
 DEPTHS_STANDARD = [1, 2, 3]
 # Depths for the guided test (Warm-Start)
-DEPTHS_WARM_START = [3, 4, 5]
+DEPTHS_WARM_START = [3, 4]
 
 # Aer simulation method: "statevector" (exact, RAM = 16 bytes * 2^n -> up to 32 qubits on 128 GB)
 # or "matrix_product_state" (exact, memory depends on entanglement -> can go beyond 32 qubits)
