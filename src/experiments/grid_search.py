@@ -12,7 +12,7 @@ from core.qaoa_solver import GridSearchSampler
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import Optimizer  
 
-from config import LIMIT_NODES, CSV_PATH, RESULTS_BASE_DIR
+from config import LIMIT_NODES, CSV_PATH, RESULTS_BASE_DIR, SIMULATION_METHOD
 
 # =========================================================
 # 1-Step Dummy Optimizer (Officialized for Qiskit)
@@ -43,7 +43,8 @@ def run_grid_search_p1(csv_path, output_dir, limit=10):
     gammas = np.linspace(0, 2 * np.pi, gamma_steps)
     
     energy_landscape = np.zeros((beta_steps, gamma_steps))
-    sampler = GridSearchSampler()
+    # Same Aer method as the other experiments (config.SIMULATION_METHOD)
+    sampler = GridSearchSampler(options={"backend_options": {"method": SIMULATION_METHOD}})
     sampler.options.default_shots = 1024
     
     dummy_opt = DummyEvaluator()
@@ -107,7 +108,8 @@ def run_grid_search_p2(csv_path, output_dir, p1_data, limit=10):
     gammas = np.linspace(0, 2 * np.pi, gamma_steps)
     
     energy_landscape = np.zeros((beta_steps, gamma_steps))
-    sampler = GridSearchSampler()
+    # Same Aer method as the other experiments (config.SIMULATION_METHOD)
+    sampler = GridSearchSampler(options={"backend_options": {"method": SIMULATION_METHOD}})
     sampler.options.default_shots = 1024
     
     dummy_opt = DummyEvaluator()
