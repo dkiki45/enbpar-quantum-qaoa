@@ -5,6 +5,7 @@ from qiskit_aer.primitives import SamplerV2
 from qiskit.primitives.containers.sampler_pub import SamplerPub 
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import COBYLA, SPSA
+from qiskit_algorithms.utils import algorithm_globals
 
 @dataclass
 class QAOARunResult:
@@ -114,7 +115,13 @@ class GridSearchSampler(FastAerSampler):
         # the original (buggy) caching logic would run a second time
         return SamplerV2.run(self, new_pubs, **kwargs)
 
-def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COBYLA", initial_point=None, sim_method=None):
+def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COBYLA", initial_point=None, sim_method=None,
+             spsa_patience=15, spsa_learning_rate=None, spsa_perturbation=None):
+    """
+    SPSA options (defaults keep the original behavior):
+      spsa_patience: iterations without improvement before early stop (None = no early stop, runs all maxiter)
+      spsa_learning_rate / spsa_perturbation: fixed step sizes; both None = Qiskit auto-calibration
+    """
     if min(reps, shots, maxiter) < 1: 
         raise ValueError("Parametros invalidos")
         
@@ -135,15 +142,23 @@ def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COB
     if sim_method is None:
         from config import SIMULATION_METHOD
         sim_method = SIMULATION_METHOD
-    sampler = FastAerSampler(options={"backend_options": {"method": sim_method}})
-    sampler.options.default_shots = shots
-    sampler.options.seed_simulator = seed
+    # Aer's SamplerV2 only accepts shots/seed in the constructor: setting
+    # sampler.options.default_shots / seed_simulator afterwards is silently ignored
+    sampler = FastAerSampler(default_shots=shots, seed=seed,
+                             options={"backend_options": {"method": sim_method}})
+
+    # Seed Qiskit's global RNG too: it drives the random QAOA initial point and the
+    # SPSA perturbations, so the same seed now reproduces the same run
+    algorithm_globals.random_seed = seed
 
     #sampler = StatevectorSampler(default_shots=shots, seed=seed)
 
     if optimizer_name.upper() == "SPSA":
-        checker = SmartSPSAChecker(tol=0.001, patience=15)
-        optimizer = SPSA(maxiter=maxiter, termination_checker=checker)
+        if (spsa_learning_rate is None) != (spsa_perturbation is None):
+            raise ValueError("Set both spsa_learning_rate and spsa_perturbation, or neither (auto-calibration)")
+        checker = SmartSPSAChecker(tol=0.001, patience=spsa_patience) if spsa_patience is not None else None
+        optimizer = SPSA(maxiter=maxiter, termination_checker=checker,
+                         learning_rate=spsa_learning_rate, perturbation=spsa_perturbation)
     else:
         optimizer = COBYLA(maxiter=maxiter, tol=1e-6)
                  
