@@ -14,6 +14,7 @@ from core.qaoa_solver import run_qaoa
 from core.solution_decoder import decode_distribution, best_feasible_or_none, feasible_probability
 from core.classical_baseline import solve_exact_ilp
 from core.graph_visualization import plot_graph
+from core.sim_backend import results_suffix, describe, require_gpu_if_selected
 
 def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_name="COBYLA", max_iter=300):
     nodes, edges = build_graph_from_csv(csv_path, limit)
@@ -56,7 +57,8 @@ def execute(csv_path, output, limit=15, reps=1, shots=8192, seed=2, optimizer_na
         "exact_bits": exact_bits, 
         "exact_cost": exact_cost,
         "cardinality_ratio": sum(best.bits) / sum(exact_bits) if best is not None and sum(exact_bits) > 0 else 0.0,
-        "parameters": result.optimal_parameters
+        "parameters": result.optimal_parameters,
+        "simulator": describe()
     }
     
     out = Path(output)
@@ -80,7 +82,9 @@ if __name__ == "__main__":
     reps_list = config.DEPTHS_STANDARD
 
     # Usando o diretório base do config
-    base_dir = config.RESULTS_BASE_DIR / f"stress_n{limit_nodes}_{optimizer}"
+    require_gpu_if_selected()
+    base_dir = config.RESULTS_BASE_DIR / f"stress_n{limit_nodes}_{optimizer}{results_suffix()}"
+    print(f"Simulator: {describe()} -> {base_dir}")
     base_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*50}")

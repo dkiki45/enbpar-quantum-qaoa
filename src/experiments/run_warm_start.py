@@ -11,6 +11,7 @@ from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.qaoa_solver import run_qaoa
 from core.solution_decoder import decode_distribution, best_feasible_or_none, feasible_probability
 from core.classical_baseline import solve_exact_ilp
+from core.sim_backend import results_suffix, describe, require_gpu_if_selected
 from config import LIMIT_NODES, CSV_PATH, SHOTS_PER_EVAL, SEEDS_TO_TEST, DEPTHS_WARM_START, RESULTS_BASE_DIR, SKIP_COMPLETED_RUNS
 
 def build_warm_start_point(p, warm_start_data):
@@ -65,7 +66,8 @@ def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, sho
         "best": asdict(best) if best is not None else None,
         "exact_cost": exact_cost,
         "parameters": result.optimal_parameters,
-        "warm_start_used": initial_pt
+        "warm_start_used": initial_pt,
+        "simulator": describe()
     }
     
     out = Path(output)
@@ -87,11 +89,13 @@ if __name__ == "__main__":
         print(f"ERROR: Could not find {json_path}. Run grid_search.py first.")
         sys.exit(1)
 
-    base_dir = RESULTS_BASE_DIR / f"warm_start_n{LIMIT_NODES}_{optimizer}"
+    require_gpu_if_selected()
+    base_dir = RESULTS_BASE_DIR / f"warm_start_n{LIMIT_NODES}_{optimizer}{results_suffix()}"
     base_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*50}")
     print(f"WARM-START TEST: {LIMIT_NODES} NODES | OPTIMIZER: {optimizer}")
+    print(f"Simulator: {describe()} -> {base_dir}")
     print(f"{'='*50}")
 
     start_total = time.time()

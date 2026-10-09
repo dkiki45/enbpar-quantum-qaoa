@@ -12,7 +12,8 @@ from core.qaoa_solver import GridSearchSampler
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import Optimizer  
 
-from config import LIMIT_NODES, CSV_PATH, RESULTS_BASE_DIR, SIMULATION_METHOD
+from core.sim_backend import backend_options, results_suffix, require_gpu_if_selected
+from config import LIMIT_NODES, CSV_PATH, RESULTS_BASE_DIR
 
 # =========================================================
 # 1-Step Dummy Optimizer (Officialized for Qiskit)
@@ -43,8 +44,8 @@ def run_grid_search_p1(csv_path, output_dir, limit=10):
     gammas = np.linspace(0, 2 * np.pi, gamma_steps)
     
     energy_landscape = np.zeros((beta_steps, gamma_steps))
-    # Same Aer method as the other experiments (config.SIMULATION_METHOD)
-    sampler = GridSearchSampler(options={"backend_options": {"method": SIMULATION_METHOD}})
+    # Same Aer method/device as the other experiments (config.py)
+    sampler = GridSearchSampler(options={"backend_options": backend_options()})
     sampler.options.default_shots = 1024
     
     dummy_opt = DummyEvaluator()
@@ -108,8 +109,8 @@ def run_grid_search_p2(csv_path, output_dir, p1_data, limit=10):
     gammas = np.linspace(0, 2 * np.pi, gamma_steps)
     
     energy_landscape = np.zeros((beta_steps, gamma_steps))
-    # Same Aer method as the other experiments (config.SIMULATION_METHOD)
-    sampler = GridSearchSampler(options={"backend_options": {"method": SIMULATION_METHOD}})
+    # Same Aer method/device as the other experiments (config.py)
+    sampler = GridSearchSampler(options={"backend_options": backend_options()})
     sampler.options.default_shots = 1024
     
     dummy_opt = DummyEvaluator()
@@ -156,7 +157,10 @@ if __name__ == "__main__":
     # Silence SciPy warnings
     warnings.filterwarnings("ignore")
     
-    target_dir = RESULTS_BASE_DIR / "v3_grid_search"
+    require_gpu_if_selected()
+    # Non-default simulators write to v3_grid_search_<suffix>, so they never overwrite the
+    # warm_start.json that run_warm_start.py reads (all devices start from the same angles)
+    target_dir = RESULTS_BASE_DIR / f"v3_grid_search{results_suffix()}"
     
     # 1. Run p=1 and store the angles + energy
     p1_optimal_data = run_grid_search_p1(CSV_PATH, target_dir, limit=LIMIT_NODES)
