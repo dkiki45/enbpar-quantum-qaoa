@@ -44,45 +44,23 @@ class SmartSPSAChecker:
         return False
 
 class FastAerSampler(SamplerV2):
+    """Aer SamplerV2 with a transpile cache that is safe against id() reuse.
+
+    The old cache was keyed only by id(circ). qiskit-algorithms passes a NEW circuit with the
+    angles already bound on every evaluation, and Python reuses the id() of freed objects, so
+    sometimes the cache returned the transpiled circuit of an OLDER evaluation (old angles):
+    that evaluation got the energy of a different point and runs with the same seed were not
+    always reproducible. Now each entry keeps a reference to its original circuit and is only
+    reused for that exact object.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._transpiled_cache = {}
 
     def run(self, pubs, **kwargs):
-        new_pubs = []
-        for pub in pubs:
-            # Extract the quantum circuit
-            circ = pub[0] if isinstance(pub, tuple) else pub.circuit
-            circ_id = id(circ)
-            
-            # If it's the first time, transpile and break giant matrices into simple gates
-            if circ_id not in self._transpiled_cache:
-                self._transpiled_cache[circ_id] = transpile(
-                    circ, 
-                    optimization_level=1, 
-                    basis_gates=['rx', 'ry', 'rz', 'cx', 'h', 'x', 'y', 'z', 'id']
-                )
-                
-            t_circ = self._transpiled_cache[circ_id]
-            
-            # Rebuild the data payload for Qiskit
-            if isinstance(pub, tuple):
-                new_pubs.append((t_circ,) + pub[1:])
-            else:
-                shots = getattr(pub, 'shots', None)
-                if shots is not None:
-                    new_pubs.append((t_circ, pub.parameter_values, shots))
-                else:
-                    new_pubs.append((t_circ, pub.parameter_values))
-                    
-        return super().run(new_pubs, **kwargs)
-
-class GridSearchSampler(FastAerSampler):
-    """Sampler used only by grid_search.py: transpile cache that is safe against id() reuse."""
-
-    def run(self, pubs, **kwargs):
-        # Fall back to the sampler's default shots when none are passed explicitly
-        default_shots = kwargs.get("shots") or self.options.default_shots
+        # Shots: run(shots=...), else options.default_shots (set by grid_search.py), else the constructor value
+        default_shots = kwargs.get("shots") or getattr(self.options, "default_shots", None) or self.default_shots
         new_pubs = []
         for pub in pubs:
             # Normalize any pub format (tuple, SamplerPub, ...) into a SamplerPub
@@ -92,7 +70,7 @@ class GridSearchSampler(FastAerSampler):
             # Reuse the transpiled circuit only if the cached entry belongs to this exact object
             cached = self._transpiled_cache.get(id(circ))
             if cached is None or cached[0] is not circ:
-                # Keep the cache small: grid search creates many short-lived circuits
+                # Keep the cache small: QAOA creates a new short-lived circuit per evaluation
                 if len(self._transpiled_cache) > 64:
                     self._transpiled_cache.clear()
                 t_circ = transpile(
@@ -111,9 +89,12 @@ class GridSearchSampler(FastAerSampler):
                 SamplerPub(t_circ, pub.parameter_values, pub.shots, validate=True)
             )
 
-        # Skip FastAerSampler.run and call SamplerV2.run directly, otherwise
-        # the original (buggy) caching logic would run a second time
-        return SamplerV2.run(self, new_pubs, **kwargs)
+        return super().run(new_pubs, **kwargs)
+
+
+class GridSearchSampler(FastAerSampler):
+    """Kept for grid_search.py: the safe cache now lives in FastAerSampler."""
+
 
 def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COBYLA", initial_point=None, sim_method=None,
              spsa_patience=15, spsa_learning_rate=None, spsa_perturbation=None):
@@ -138,14 +119,12 @@ def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COB
         })
 
     # qiskit aer
-    # Simulation method defaults to config.SIMULATION_METHOD ("statevector" or "matrix_product_state")
-    if sim_method is None:
-        from config import SIMULATION_METHOD
-        sim_method = SIMULATION_METHOD
+    # Method/device/precision default to config.py (SIMULATION_METHOD, SIMULATION_DEVICE, SIMULATION_PRECISION)
+    from core.sim_backend import backend_options
     # Aer's SamplerV2 only accepts shots/seed in the constructor: setting
     # sampler.options.default_shots / seed_simulator afterwards is silently ignored
     sampler = FastAerSampler(default_shots=shots, seed=seed,
-                             options={"backend_options": {"method": sim_method}})
+                             options={"backend_options": backend_options(sim_method)})
 
     # Seed Qiskit's global RNG too: it drives the random QAOA initial point and the
     # SPSA perturbations, so the same seed now reproduces the same run
