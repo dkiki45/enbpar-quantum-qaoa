@@ -12,7 +12,7 @@
 
 # --- Quantum Computing ---
 qiskit==2.5.2              # QuantumCircuit, transpile, SparsePauliOp, Statevector, SamplerPub
-qiskit-aer==0.17.2         # qiskit_aer.primitives.SamplerV2
+qiskit-aer==0.17.2         # qiskit_aer.primitives.SamplerV2 (NVIDIA GPU: see requirements-gpu.txt)
 qiskit-algorithms==0.4.0   # QAOA, COBYLA, SPSA, Optimizer
 
 # --- data/Scientific ---

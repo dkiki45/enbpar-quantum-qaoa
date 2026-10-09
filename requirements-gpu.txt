@@ -1,0 +1,30 @@
+# GPU environment (NVIDIA, Linux x86_64 only) — same stack as requirements.txt,
+# but qiskit-aer is replaced by its CUDA build (same version, 0.17.2).
+# Do NOT install qiskit-aer and qiskit-aer-gpu-cu11 together: both provide the qiskit_aer module.
+#
+# Recommended: a separate conda env, so CPU runs in the "qaoa" env are not affected:
+#   conda create -n qaoa-gpu --clone qaoa -y
+#   conda activate qaoa-gpu
+#   pip uninstall -y qiskit-aer
+#   pip install -r requirements-gpu.txt
+#
+# Notes:
+# - There is no CUDA 12 wheel of Aer 0.16/0.17 on PyPI (qiskit-aer-gpu stopped at 0.15.1,
+#   which does not work with Qiskit 2.x). The CUDA 11.8 build below runs on recent drivers
+#   (tested stack: Qiskit 2.5.2 + qiskit-algorithms 0.4.0, all tests pass, CPU results identical
+#   to qiskit-aer 0.17.2). It bundles the CUDA runtime and cuStateVec: no CUDA toolkit needed,
+#   only the NVIDIA driver.
+# - Check the GPU with: nvidia-smi   (must show the GPU table, not an error)
+# - GPU works only with SIMULATION_METHOD = "statevector" (see src/config.py).
+
+qiskit==2.5.2
+qiskit-aer-gpu-cu11==0.17.2   # replaces qiskit-aer==0.17.2
+qiskit-algorithms==0.4.0
+
+numpy==2.4.6
+scipy==1.17.1
+pandas==3.0.6
+matplotlib==3.11.2
+networkx==3.6.1
+
+pytest==9.1.1
