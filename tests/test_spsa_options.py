@@ -25,3 +25,16 @@ def test_same_seed_reproduces_run():
         b = run_qaoa(small_model(), reps=1, shots=256, seed=7, maxiter=10, optimizer_name=opt)
         assert len(a.history) == len(b.history)
         assert a.expectation_qubo == b.expectation_qubo
+
+
+def test_transpile_cache_ignores_reused_ids():
+    # A cached entry must never be used for a different circuit object (old id() bug)
+    from qiskit import QuantumCircuit
+    from core.qaoa_solver import FastAerSampler
+    sampler = FastAerSampler(default_shots=64, seed=1)
+    a = QuantumCircuit(1); a.measure_all()            # always 0
+    b = QuantumCircuit(1); b.x(0); b.measure_all()    # always 1
+    sampler.run([a]).result()
+    sampler._transpiled_cache[id(b)] = sampler._transpiled_cache.pop(id(a))  # simulate id reuse
+    counts = sampler.run([b]).result()[0].data.meas.get_counts()
+    assert counts == {"1": 64}
