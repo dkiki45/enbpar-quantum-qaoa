@@ -13,9 +13,12 @@ Setups:
   sv_gpu         statevector on GPU (double)
   sv_gpu_cusv    statevector on GPU + NVIDIA cuStateVec
   sv_gpu_single  statevector on GPU, single precision (half the memory)
+  tn_gpu         tensor_network on GPU (NVIDIA cuTensorNet)
 
 Columns: first = first call (includes transpile), eval = mean time of the next calls,
 E_qubo = mean QUBO energy of the samples (should agree across setups within shot noise),
+E_exact = exact QUBO energy at the same angles, no shots (must agree across setups to ~1e-6:
+this is the accuracy check between methods, e.g. tensor_network vs statevector),
 RAM = peak process memory (GB), VRAM = peak GPU memory of the process (GB).
 
 Results: src/results/bench_devices/n<N>/
@@ -42,6 +45,7 @@ SETUPS = {
     "sv_gpu":        {"method": "statevector",          "device": "GPU", "precision": "double", "custatevec": False},
     "sv_gpu_cusv":   {"method": "statevector",          "device": "GPU", "precision": "double", "custatevec": True},
     "sv_gpu_single": {"method": "statevector",          "device": "GPU", "precision": "single", "custatevec": False},
+    "tn_gpu":        {"method": "tensor_network",       "device": "GPU", "precision": "double", "custatevec": False},
 }
 
 
@@ -76,7 +80,9 @@ class GpuMemoryWatcher(threading.Thread):
 def worker(setup_key, p, n_nodes, shots, evals):
     """Runs one (setup, p) point and prints a JSON line with the measurements."""
     import numpy as np
+    from qiskit import transpile
     from qiskit.circuit.library import QAOAAnsatz
+    from qiskit_aer import AerSimulator
     from core.graph_builder import build_graph_from_csv
     from core.qubo_formalization import build_mis_qubo, qubo_to_ising
     from core.qaoa_solver import FastAerSampler
@@ -121,6 +127,19 @@ def worker(setup_key, p, n_nodes, shots, evals):
         energies.append(sum(c.probability * c.cost for c in cands))
         pfeas.append(feasible_probability(cands))
 
+    # Exact energy at the same angles (no shots): accuracy check between methods
+    hamiltonian = model.to_sparse_pauli_op()
+    exact_circ = transpile(QAOAAnsatz(hamiltonian, reps=p).assign_parameters(angles),
+                           basis_gates=['rx', 'ry', 'rz', 'cx', 'h', 'x', 'y', 'z', 'id'], optimization_level=1)
+    exact_circ.save_expectation_value(hamiltonian, list(range(exact_circ.num_qubits)), label="E")
+    t0 = time.perf_counter()
+    try:
+        e_exact = float(AerSimulator(**opts).run(exact_circ, shots=1).result().data(0)["E"]) + model.offset
+    except Exception as e:  # e.g. method without expectation-value support
+        e_exact = None
+        print(f"exact energy failed: {e}", file=sys.stderr)
+    exact_s = time.perf_counter() - t0
+
     vram = watcher.stop() if watcher else None
     ram_gb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 ** 2  # Linux: KB
     print(json.dumps({
@@ -128,6 +147,7 @@ def worker(setup_key, p, n_nodes, shots, evals):
         "shots": shots, "evals": evals,
         "first_s": times[0], "eval_s": float(np.mean(times[1:])), "eval_times_s": times[1:],
         "E_qubo": float(np.mean(energies)), "P_feasible": float(np.mean(pfeas)),
+        "E_exact": e_exact, "exact_s": exact_s,
         "ram_gb": ram_gb, "vram_gb": vram,
     }))
 
@@ -156,7 +176,7 @@ def fmt(x, nd=2):
 
 
 def report(base, setups, depths):
-    header = f"{'setup':14s} {'p':>2s} {'status':>9s} {'first_s':>8s} {'eval_s':>8s} {'x sv_cpu':>8s} {'x mps':>7s} {'E_qubo':>8s} {'P(feas)':>7s} {'RAM GB':>7s} {'VRAM GB':>7s}"
+    header = f"{'setup':14s} {'p':>2s} {'status':>9s} {'first_s':>8s} {'eval_s':>8s} {'x sv_cpu':>8s} {'x mps':>7s} {'E_qubo':>8s} {'E_exact':>12s} {'P(feas)':>7s} {'RAM GB':>7s} {'VRAM GB':>7s}"
     lines = [header, "-" * len(header)]
     data = {}
     for f in base.glob("*/p*.json"):
@@ -173,7 +193,7 @@ def report(base, setups, depths):
             sp_sv = ref_sv / ev if ev and ref_sv else None
             sp_mps = ref_mps / ev if ev and ref_mps else None
             lines.append(f"{s:14s} {p:2d} {r['status']:>9s} {fmt(r.get('first_s')):>8s} {fmt(ev):>8s} "
-                         f"{fmt(sp_sv, 1):>8s} {fmt(sp_mps, 1):>7s} {fmt(r.get('E_qubo'), 3):>8s} "
+                         f"{fmt(sp_sv, 1):>8s} {fmt(sp_mps, 1):>7s} {fmt(r.get('E_qubo'), 3):>8s} {fmt(r.get('E_exact'), 6):>12s} "
                          f"{fmt(r.get('P_feasible'), 3):>7s} {fmt(r.get('ram_gb'), 1):>7s} {fmt(r.get('vram_gb'), 1):>7s}")
         lines.append("")
     text = "\n".join(lines)
