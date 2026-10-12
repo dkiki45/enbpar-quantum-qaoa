@@ -29,6 +29,9 @@ This repository maps public lighting planning as a **Maximal Independent Set (MI
 * **CPU vs GPU Benchmark (`bench_devices.py`):** time and memory of one QAOA evaluation for MPS-CPU, statevector-CPU and statevector-GPU (with/without cuStateVec, single precision), same circuit, angles and shots, for $p = 1 \dots 6$.
 * **ILP Limits (`ilp_limits.py`):** how far the exact baseline scales on the real streetlight graph, geometric graphs and dense random graphs, reporting proven optimality or the remaining gap at a time limit.
 * **Deeper Circuits:** warm-start now runs $p = 3, 4, 5, 6$.
+* **Extended Grid Search (`grid_search_ext.py`):** exact (shot-free) QAOA energy landscape on fine grids, layer by layer up to $p$ = `--max-p`, with zoom refinement, sampling at the best angles (P(feasible), P(optimum) vs ILP) and resume support. Works with `statevector` or `tensor_network` on the GPU.
+* **Tensor Network:** `SIMULATION_METHOD = "tensor_network"` (GPU only, NVIDIA cuTensorNet). `bench_devices.py` reports the exact energy of every method at the same angles, so tensor network and statevector can be compared directly.
+* **Standalone GPU Test (`gpu_test.py`):** checks the GPU and compares CPU vs GPU time for 20-30 qubits, no project code needed.
 
 **Configuration (`src/config.py`)**
 * `LIMIT_NODES`: number of vertices in the subgraph = number of qubits.
@@ -83,6 +86,12 @@ CPU vs GPU benchmark, then a GPU warm-start run (set `SIMULATION_METHOD = "state
 ```bash
 PYTHONPATH=src python -u src/experiments/bench_devices.py
 PYTHONPATH=src python -u src/experiments/run_warm_start.py COBYLA
+```
+
+Extended grid search on the GPU (check the time first with `--estimate`):
+```bash
+PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector --device GPU --estimate
+PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector --device GPU --max-p 3
 ```
 
 ILP scaling limits:
