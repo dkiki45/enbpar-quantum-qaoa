@@ -8,7 +8,8 @@ SKIP_COMPLETED_RUNS never mixes runs from different simulators.
 """
 
 LEGACY = ("matrix_product_state", "CPU", "double")
-GPU_METHODS = ("statevector", "density_matrix", "unitary")  # Aer methods with a GPU implementation
+GPU_METHODS = ("statevector", "density_matrix", "unitary", "tensor_network")  # Aer methods with a GPU implementation
+GPU_ONLY_METHODS = ("tensor_network",)  # Aer runs tensor_network only on GPU (NVIDIA cuTensorNet)
 
 
 def _resolve(method=None, device=None, precision=None):
@@ -22,6 +23,8 @@ def _resolve(method=None, device=None, precision=None):
         raise ValueError(f"SIMULATION_PRECISION must be 'double' or 'single', got {precision!r}")
     if device == "GPU" and method not in GPU_METHODS:
         raise ValueError(f"Aer has no GPU implementation of {method!r}: use SIMULATION_METHOD = 'statevector'")
+    if device == "CPU" and method in GPU_ONLY_METHODS:
+        raise ValueError(f"{method!r} only runs on the GPU in Aer: set SIMULATION_DEVICE = 'GPU'")
     if precision == "single" and method != "statevector":
         raise ValueError("SIMULATION_PRECISION = 'single' is only supported here with 'statevector'")
     return method, device, precision
