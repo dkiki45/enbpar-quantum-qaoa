@@ -15,6 +15,8 @@ def test_gpu_options_and_suffix():
     assert results_suffix("statevector", "GPU", "double") == "_statevector_GPU"
     assert results_suffix("statevector", "CPU", "double") == "_statevector_CPU"
     assert results_suffix("statevector", "GPU", "single") == "_statevector_GPU_single"
+    assert backend_options("tensor_network", "GPU", "double", custatevec=False) == {"method": "tensor_network", "device": "GPU"}
+    assert results_suffix("tensor_network", "GPU", "double") == "_tensor_network_GPU"
 
 
 def test_invalid_combinations():
@@ -24,3 +26,5 @@ def test_invalid_combinations():
         backend_options("matrix_product_state", "CPU", "single")
     with pytest.raises(ValueError):
         backend_options("statevector", "TPU", "double")
+    with pytest.raises(ValueError):
+        backend_options("tensor_network", "CPU", "double")  # tensor_network is GPU only
