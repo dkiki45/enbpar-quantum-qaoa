@@ -24,7 +24,8 @@ DEPTHS_WARM_START = [3, 4, 5, 6]
 SIMULATION_METHOD = "matrix_product_state"
 
 # Aer device: "CPU" or "GPU". GPU needs the qaoa-gpu env (requirements-gpu.txt) and
-# SIMULATION_METHOD = "statevector" (Aer has no GPU version of matrix_product_state).
+# SIMULATION_METHOD = "statevector" or "tensor_network" (Aer has no GPU version of
+# matrix_product_state; tensor_network runs only on the GPU).
 SIMULATION_DEVICE = "CPU"
 # "double" (16 bytes/amplitude: 30 qubits = 16 GB) or "single" (8 bytes: 31 qubits fit in a 24 GB GPU).
 # Only used with "statevector".
