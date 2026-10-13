@@ -33,6 +33,20 @@ This repository maps public lighting planning as a **Maximal Independent Set (MI
 * **Tensor Network:** `SIMULATION_METHOD = "tensor_network"` (GPU only, NVIDIA cuTensorNet). `bench_devices.py` reports the exact energy of every method at the same angles, so tensor network and statevector can be compared directly.
 * **Standalone GPU Test (`gpu_test.py`):** checks the GPU and compares CPU vs GPU time for 20-30 qubits, no project code needed.
 
+**Branch `motor-quantico-led`: the quantum engine applied to the LED (MIS) problem**
+* `main` keeps the reference code; this branch carries the LED-specific work.
+* **Warm-start from the extended grid:** `WARM_START_SOURCE = "ext"` makes `run_warm_start.py` start from the best angles of every layer found by `grid_search_ext.py` (e.g. $p=1..3$); deeper layers start at 0. Results go to `warm_start_n<N>_<optimizer>..._gridext`, separate from the `"v3"` runs.
+
+**Problem-specific (LED / MIS) parts of the code** — what changes to apply the engine to another binary problem:
+* `src/core/graph_builder.py`: reads the streetlight CSV, builds the conflict graph (Haversine distance) and the BFS subgraph.
+* `src/core/qubo_formalization.py`: `build_mis_qubo`, `classical_cost`, `conflicting_edges` (MIS objective and penalty $\alpha=1$, $\beta=2$). `IsingModel` and `qubo_to_ising` are generic.
+* `src/core/classical_baseline.py`: exact MIS solvers (ILP $x_i + x_j \le 1$, brute force).
+* `src/core/solution_decoder.py`: feasibility = no conflicting edge, mapping back to streetlight coordinates (`integer_to_bits` and the probability helpers are generic).
+* `src/core/graph_visualization.py` and `plot_analysis.py`: geographic plots of the streetlights.
+* `src/config.py`: `CSV_PATH`, `LIMIT_NODES`, `START_NODE`.
+* Experiment scripts (`run_qaoa.py`, `run_warm_start.py`, `grid_search*.py`, `spsa_study.py`, `validate_samplers.py`, `bench_devices.py`) call the functions above to build the problem; `ilp_limits.py` is MIS-only.
+* Generic engine (no change needed): `qaoa_solver.py`, `sim_backend.py`, `qaoa_circuit.py`, the GPU/benchmark tooling and the warm-start/grid machinery.
+
 **Configuration (`src/config.py`)**
 * `LIMIT_NODES`: number of vertices in the subgraph = number of qubits.
 * `START_NODE`: CSV index where the BFS subgraph selection starts.
