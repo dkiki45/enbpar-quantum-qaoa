@@ -35,6 +35,14 @@ SIMULATION_CUSTATEVEC = False
 # Any setup other than MPS + CPU + double writes to result folders with a suffix
 # (e.g. warm_start_n30_COBYLA_statevector_GPU), so GPU runs never overwrite or skip CPU runs.
 
+# Initial angles used by run_warm_start.py:
+#   "v3"  -> v3_grid_search/warm_start.json from grid_search.py (layers 1-2; deeper layers start at 0)
+#   "ext" -> summary.json from grid_search_ext.py (best angles of every layer it searched, e.g. 1-3;
+#            deeper layers start at 0). Results go to folders ending in "_gridext".
+WARM_START_SOURCE = "v3"
+# grid_search_ext.py results folder, relative to RESULTS_BASE_DIR (None = n<LIMIT_NODES>_statevector_GPU)
+WARM_START_EXT_DIR = None
+
 # Skip (seed, depth) runs that already have a summary.json, so an interrupted
 # experiment resumes where it stopped. Delete the results folder to rerun from scratch.
 SKIP_COMPLETED_RUNS = True
