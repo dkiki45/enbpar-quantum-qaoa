@@ -13,6 +13,7 @@ from core.solution_decoder import decode_distribution, best_feasible_or_none, fe
 from core.classical_baseline import solve_exact_ilp
 from core.sim_backend import results_suffix, describe, require_gpu_if_selected
 from config import LIMIT_NODES, CSV_PATH, SHOTS_PER_EVAL, SEEDS_TO_TEST, DEPTHS_WARM_START, RESULTS_BASE_DIR, SKIP_COMPLETED_RUNS
+import config
 
 def build_warm_start_point(p, warm_start_data):
     """
@@ -30,12 +31,48 @@ def build_warm_start_point(p, warm_start_data):
     
     return betas + gammas
 
-def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, shots=1024, seed=2, optimizer_name="COBYLA", max_iter=300):
+def build_ext_warm_start_point(p, ext_summary):
+    """
+    Initial point from grid_search_ext.py: uses the best angles of the deepest searched
+    layer k <= p (summary["p<k>"]), and starts the remaining p - k layers at 0.0.
+    Same [beta_0..beta_{p-1}, gamma_0..gamma_{p-1}] format as build_warm_start_point.
+    """
+    available = sorted(int(k[1:]) for k in ext_summary if k.startswith("p") and k[1:].isdigit())
+    usable = [k for k in available if k <= p]
+    if not usable:
+        raise ValueError(f"grid_search_ext summary has no layer <= p={p} (available: {available})")
+    k = usable[-1]
+    betas = list(ext_summary[f"p{k}"]["best_betas"][:k]) + [0.0] * (p - k)
+    gammas = list(ext_summary[f"p{k}"]["best_gammas"][:k]) + [0.0] * (p - k)
+    return betas + gammas
+
+def load_warm_start():
+    """Returns (source, data, path) according to config.WARM_START_SOURCE ("v3" or "ext")."""
+    source = getattr(config, "WARM_START_SOURCE", "v3")
+    if source == "v3":
+        path = RESULTS_BASE_DIR / "v3_grid_search" / "warm_start.json"
+        hint = "Run grid_search.py first."
+    elif source == "ext":
+        sub_dir = getattr(config, "WARM_START_EXT_DIR", None) or f"grid_search_ext/n{LIMIT_NODES}_statevector_GPU"
+        path = RESULTS_BASE_DIR / sub_dir / "summary.json"
+        hint = "Run grid_search_ext.py first or set WARM_START_EXT_DIR."
+    else:
+        raise SystemExit(f"WARM_START_SOURCE must be 'v3' or 'ext', got {source!r}")
+    try:
+        return source, json.loads(Path(path).read_text(encoding="utf-8")), path
+    except FileNotFoundError:
+        raise SystemExit(f"ERROR: Could not find {path}. {hint}")
+
+def initial_point_for(p, source, data):
+    return build_ext_warm_start_point(p, data) if source == "ext" else build_warm_start_point(p, data)
+
+def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, shots=1024, seed=2, optimizer_name="COBYLA", max_iter=300,
+                       warm_start_source="v3"):
     nodes, edges = build_graph_from_csv(csv_path, limit)
     linear, quadratic, off = build_mis_qubo(len(nodes), edges)
     model = qubo_to_ising(len(nodes), linear, quadratic, off)
     
-    initial_pt = build_warm_start_point(p_depth, warm_start_data)
+    initial_pt = initial_point_for(p_depth, warm_start_source, warm_start_data)
     
     result = run_qaoa(
         model, 
@@ -67,6 +104,7 @@ def execute_warm_start(csv_path, output, p_depth, warm_start_data, limit=10, sho
         "exact_cost": exact_cost,
         "parameters": result.optimal_parameters,
         "warm_start_used": initial_pt,
+        "warm_start_source": warm_start_source,
         "simulator": describe()
     }
     
@@ -81,21 +119,18 @@ if __name__ == "__main__":
     optimizer = sys.argv[1].upper() if len(sys.argv) > 1 else "COBYLA"
     max_iterations = 300
     
-    json_path = RESULTS_BASE_DIR / "v3_grid_search" / "warm_start.json"
-    try:
-        with open(json_path, "r") as f:
-            warm_data = json.load(f)
-    except FileNotFoundError:
-        print(f"ERROR: Could not find {json_path}. Run grid_search.py first.")
-        sys.exit(1)
+    ws_source, warm_data, json_path = load_warm_start()
 
     require_gpu_if_selected()
-    base_dir = RESULTS_BASE_DIR / f"warm_start_n{LIMIT_NODES}_{optimizer}{results_suffix()}"
+    # "ext" warm-start runs get their own folders, so SKIP_COMPLETED_RUNS never mixes them with "v3" runs
+    ws_suffix = "_gridext" if ws_source == "ext" else ""
+    base_dir = RESULTS_BASE_DIR / f"warm_start_n{LIMIT_NODES}_{optimizer}{results_suffix()}{ws_suffix}"
     base_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*50}")
     print(f"WARM-START TEST: {LIMIT_NODES} NODES | OPTIMIZER: {optimizer}")
     print(f"Simulator: {describe()} -> {base_dir}")
+    print(f"Warm-start: {ws_source} ({json_path})")
     print(f"{'='*50}")
 
     start_total = time.time()
@@ -123,7 +158,8 @@ if __name__ == "__main__":
                 shots=SHOTS_PER_EVAL, 
                 seed=s,
                 optimizer_name=optimizer,
-                max_iter=max_iterations
+                max_iter=max_iterations,
+                warm_start_source=ws_source
             )
             energies.append(summary["expectation_qubo"])
             feasible = summary.get("feasible", True)
