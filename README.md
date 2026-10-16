@@ -108,6 +108,12 @@ PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector
 PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector --device GPU --max-p 3
 ```
 
+Report 04 feedback campaign (GPU, ~52 h, resumable): depth with 20 seeds, grid effects, layer expansion and generalization, each run re-evaluated with exact energy and 10k independent shots (P(optimum), P(feasible), valid size, evaluations, time):
+```bash
+bash scripts/campaign.sh smoke   # ~5 min check first
+bash scripts/campaign.sh all     # exp1 -> exp2 -> exp3 -> exp4 -> report (src/results/campaign/report.md)
+```
+
 ILP scaling limits:
 ```bash
 PYTHONPATH=src python -u src/experiments/ilp_limits.py --kinds csv,geo,er3,er6 --sizes 30,60,125,250,500,1000
