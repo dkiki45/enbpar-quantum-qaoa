@@ -11,10 +11,13 @@ Differences from grid_search.py (which stays unchanged for the warm-start pipeli
   * At the best angles of each p, 4096 shots are sampled and compared with the exact ILP
     optimum: best bitstring found, P(feasible) and P(optimum).
   * Resumable: every finished row is saved, so an interrupted run continues where it stopped.
+  * --energy shots estimates each grid point with --grid-shots samples instead (the old
+    grid_search.py way), to measure how much the exact energy matters. --tag names the
+    results folder, so grid variants (e.g. 20x20 exact vs 20x20 shots) never overwrite each other.
 
 Method/device come from config.py or --method/--device, e.g. --method tensor_network --device GPU.
 
-Results: src/results/grid_search_ext/n<N>_<method>_<device>/
+Results: src/results/grid_search_ext/n<N>_<method>_<device>[_<tag>]/
   p<k>_landscape.npy / .png, p<k>_zoom.npy, summary.json (best angles, energies, sampling stats),
   warm_start.json (same format as v3_grid_search, usable by run_warm_start.py if desired)
 
@@ -22,6 +25,7 @@ Usage (from the repo root):
     PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector --device GPU --max-p 3
     PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method tensor_network --device GPU --max-p 3
     PYTHONPATH=src python -u src/experiments/grid_search_ext.py --estimate      # time per point and ETA only
+    PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector --device GPU --steps 20 --zoom-steps 0 --energy shots --tag s20_shots
 """
 import argparse
 import json
@@ -68,6 +72,33 @@ class LandscapeEvaluator:
         bind.update({q: [pt[1][i] for pt in points] for i, q in enumerate(self.gammas)})
         res = self.sim.run(self.circ, parameter_binds=[bind], shots=1).result()
         return np.array([res.data(i)["E"] for i in range(len(points))]) + self.model.offset
+
+
+class ShotsEvaluator:
+    """Sampled QAOA energy (mean QUBO cost of `shots` samples) for many angle sets per job."""
+
+    def __init__(self, model, p, sim_opts, edges, shots=1024, seed=7):
+        self.model, self.p = model, p
+        circ = QAOAAnsatz(model.to_sparse_pauli_op(), reps=p)
+        circ.measure_all()
+        self.circ = circ
+        params = list(circ.parameters)
+        self.order = [("b", q.index) if q.name.startswith("β") else ("g", q.index) for q in params]
+        assert len(params) == 2 * p, "unexpected QAOAAnsatz parameters"
+        self.sampler = FastAerSampler(default_shots=shots, seed=seed, options={"backend_options": sim_opts})
+        self.e = np.asarray(edges, dtype=int).reshape(-1, 2)
+
+    def _mean_cost(self, counts, alpha=1.0, beta=2.0):
+        keys = list(counts)
+        x = np.array([[int(c) for c in reversed(k)] for k in keys], dtype=float)  # x_0..x_(n-1)
+        w = np.array([counts[k] for k in keys], dtype=float)
+        cost = -alpha * x.sum(axis=1) + beta * (x[:, self.e[:, 0]] * x[:, self.e[:, 1]]).sum(axis=1)
+        return float((cost * w).sum() / w.sum())
+
+    def energies(self, points):
+        vals = np.array([[pt[0][i] if kind == "b" else pt[1][i] for kind, i in self.order] for pt in points])
+        data = self.sampler.run([(self.circ, vals)]).result()[0].data.meas
+        return np.array([self._mean_cost(data.get_counts(loc=k)) for k in range(len(points))])
 
 
 def grid_layer(ev, fixed_b, fixed_g, betas, gammas, store, label):
@@ -146,6 +177,10 @@ if __name__ == "__main__":
     ap.add_argument("--shots", type=int, default=4096, help="shots for the final sampling at the best angles")
     ap.add_argument("--nodes", type=int, default=LIMIT_NODES)
     ap.add_argument("--estimate", action="store_true", help="time one grid row per p and print the ETA, then exit")
+    ap.add_argument("--energy", choices=["exact", "shots"], default="exact",
+                    help="grid energy: exact (default) or estimated from --grid-shots samples")
+    ap.add_argument("--grid-shots", type=int, default=1024, help="samples per grid point with --energy shots")
+    ap.add_argument("--tag", default="", help="suffix for the results folder (grid variants)")
     args = ap.parse_args()
 
     opts = backend_options(args.method, args.device)
@@ -154,7 +189,7 @@ if __name__ == "__main__":
         if err:
             raise SystemExit(f"GPU not usable: {err}")
     dev = opts.get("device", "CPU")
-    out = RESULTS_BASE_DIR / "grid_search_ext" / f"n{args.nodes}_{opts['method']}_{dev}"
+    out = RESULTS_BASE_DIR / "grid_search_ext" / (f"n{args.nodes}_{opts['method']}_{dev}" + (f"_{args.tag}" if args.tag else ""))
     out.mkdir(parents=True, exist_ok=True)
 
     nodes, edges = build_graph_from_csv(CSV_PATH, args.nodes)
@@ -165,11 +200,17 @@ if __name__ == "__main__":
     db, dg = betas[1] - betas[0], gammas[1] - gammas[0]
 
     print(f"\n{'=' * 64}\nEXTENDED GRID SEARCH | {len(nodes)} qubits | {opts} | p=1..{args.max_p}\n"
-          f"grid {args.steps}x{args.steps} (+ zoom {args.zoom_steps}x{args.zoom_steps}) | ILP optimum {exact_cost}\n{'=' * 64}")
+          f"grid {args.steps}x{args.steps} (+ zoom {args.zoom_steps}x{args.zoom_steps}) | energy {args.energy}"
+          f" | ILP optimum {exact_cost}\n-> {out}\n{'=' * 64}")
+
+    def make_evaluator(p):
+        if args.energy == "shots":
+            return ShotsEvaluator(model, p, opts, edges, shots=args.grid_shots)
+        return LandscapeEvaluator(model, p, opts)
 
     if args.estimate:
         for p in range(1, args.max_p + 1):
-            ev = LandscapeEvaluator(model, p, opts)
+            ev = make_evaluator(p)
             t0 = time.time()
             ev.energies([([0.3] * p, [0.5] * p)])  # warm-up (GPU init, first job)
             t1 = time.time()
@@ -183,6 +224,7 @@ if __name__ == "__main__":
     summary = json.loads(summary_path.read_text()) if summary_path.exists() else {}
     summary.update({"n_qubits": len(nodes), "n_edges": len(edges), "exact_cost": exact_cost,
                     "backend_options": opts, "steps": args.steps, "zoom_steps": args.zoom_steps,
+                    "energy": args.energy, "grid_shots": args.grid_shots if args.energy == "shots" else None,
                     "beta_range": BETA_RANGE, "gamma_range": GAMMA_RANGE})
     fixed_b, fixed_g = [], []
     t_total = time.time()
@@ -190,7 +232,7 @@ if __name__ == "__main__":
         fixed_txt = f" | earlier layers fixed: betas {np.round(fixed_b, 4).tolist()}, gammas {np.round(fixed_g, 4).tolist()}" if p > 1 else ""
         print(f"\n>> p={p}{fixed_txt}")
         t_p = time.time()
-        ev = LandscapeEvaluator(model, p, opts)
+        ev = make_evaluator(p)
         land, b, g, e = grid_layer(ev, fixed_b, fixed_g, betas, gammas, out / f"p{p}_landscape.npy", f"p={p} grid")
         heatmap(land, betas, gammas, (b, g), out / f"p{p}_landscape.png",
                 f"Exact QAOA landscape p={p} ({opts['method']}, {dev})" + (" - earlier layers fixed" if p > 1 else ""))
@@ -198,9 +240,12 @@ if __name__ == "__main__":
         if args.zoom_steps > 0:
             _, b, g, e = zoom(ev, fixed_b, fixed_g, b, g, db, dg, args.zoom_steps, out / f"p{p}_zoom.npy", f"p={p} zoom")
         fixed_b, fixed_g = fixed_b + [float(b)], fixed_g + [float(g)]
+        # exact energy of the chosen angles (with --energy shots, `e` is a noisy estimate)
+        e_exact = float(LandscapeEvaluator(model, p, opts).energies([(fixed_b, fixed_g)])[0]) if args.energy == "shots" else float(e)
         stats = sample_at(model, nodes, edges, exact_cost, p, fixed_b, fixed_g, opts, args.shots)
         summary[f"p{p}"] = {"grid_best": grid_best, "best_betas": fixed_b, "best_gammas": fixed_g,
-                            "best_energy": float(e), "minutes": (time.time() - t_p) / 60, **stats}
+                            "best_energy": float(e), "best_energy_exact": e_exact,
+                            "minutes": (time.time() - t_p) / 60, **stats}
         summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
         print(f"   best p={p}: E={e:.4f} | sampled best {stats['best_cost']} (optimum {exact_cost}) | "
               f"P(feasible) {stats['P_feasible']:.3f} | P(optimum) {stats['P_optimum']:.4f}", flush=True)
