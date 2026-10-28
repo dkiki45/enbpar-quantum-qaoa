@@ -18,9 +18,10 @@ import statistics as st
 
 import config
 
-COLS = ["campaign", "p", "seed", "n_nodes", "exact_cost", "grid", "grid_layers_used", "extend", "perturb",
-        "E_exact_final", "P_optimum", "P_feasible", "mean_valid_size", "best_cost", "hit_optimum",
-        "n_evaluations", "optimize_s", "final_eval_s", "total_run_s", "grid_minutes_shared"]
+COLS = ["campaign", "mode", "p", "seed", "n_nodes", "exact_cost", "grid", "grid_layers_used", "extend", "perturb",
+        "E_exact_initial", "E_exact_final", "delta_E", "P_optimum", "P_feasible", "mean_valid_size",
+        "approx_ratio_all", "approx_ratio_valid", "TTS99_shots", "best_cost", "hit_optimum",
+        "n_evaluations", "init_eval_s", "optimize_s", "final_eval_s", "total_run_s", "grid_minutes_shared"]
 
 
 def fmt(x, nd=3):
@@ -50,20 +51,24 @@ if __name__ == "__main__":
         bl = json.loads((camp / "baseline.json").read_text(encoding="utf-8")) if (camp / "baseline.json").exists() else {}
         cfg = json.loads((camp / "config.json").read_text(encoding="utf-8")) if (camp / "config.json").exists() else {}
         lines.append(f"## {camp.name}")
-        lines.append(f"grid `{runs[0]['grid']}` (layers <= {cfg.get('grid_max_layer', '?')}) · extend `{runs[0]['extend']}` · "
+        lines.append(f"mode `{runs[0].get('mode', 'shots')}` · grid `{runs[0]['grid']}` (layers <= {cfg.get('grid_max_layer', '?')}) · extend `{runs[0]['extend']}` · "
                      f"perturb ±{runs[0]['perturb']} · {bl.get('n_nodes')} nodes, {bl.get('n_edges')} edges, "
                      f"MIS {bl.get('mis_size')} (ILP {fmt(bl.get('ilp_s'))} s · greedy {bl.get('greedy_size')})")
         lines.append("")
-        lines.append("| p | runs | optimum found | P(opt) mean | P(opt) median | P(feas) mean | valid size | E exact mean ± std | evals | min/run |")
-        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+        lines.append("| p | runs | optimum found | P(opt) mean | P(opt) median | TTS99 median (shots) | P(feas) mean "
+                     "| valid size | E exact mean ± std | ΔE mean | evals | min/run |")
+        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
         for p in sorted({r["p"] for r in runs}):
             rs = [r for r in runs if r["p"] == p]
             e = [r["E_exact_final"] for r in rs]
             po = [r["P_optimum"] for r in rs]
+            tts = [r.get("TTS99_shots") for r in rs if r.get("TTS99_shots") is not None]
             lines.append(
                 f"| {p} | {len(rs)} | {sum(r['hit_optimum'] for r in rs)}/{len(rs)} | {fmt(mean(po), 4)} | {fmt(st.median(po), 4)} "
+                f"| {fmt(st.median(tts) if tts else None, 0)} "
                 f"| {fmt(mean([r['P_feasible'] for r in rs]))} | {fmt(mean([r['mean_valid_size'] for r in rs]), 2)} "
-                f"| {fmt(mean(e))} ± {fmt(st.stdev(e) if len(e) > 1 else 0.0)} | {fmt(mean([r['n_evaluations'] for r in rs]), 0)} "
+                f"| {fmt(mean(e))} ± {fmt(st.stdev(e) if len(e) > 1 else 0.0)} | {fmt(mean([r.get('delta_E') for r in rs]))} "
+                f"| {fmt(mean([r['n_evaluations'] for r in rs]), 0)} "
                 f"| {fmt(mean([r['total_run_s'] for r in rs]) / 60, 1)} |")
         lines.append("")
 

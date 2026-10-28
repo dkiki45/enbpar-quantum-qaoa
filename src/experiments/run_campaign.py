@@ -7,10 +7,16 @@ One run = (depth p, seed). For each run:
      extra layers are filled by --extend (zeros | perturb | interp). Then the seed adds a uniform
      perturbation of +-(--perturb) rad to ALL angles, so different seeds start from different
      points (with --perturb 0 the seeds differ only in the shot sampling).
-  2. COBYLA optimization (run_qaoa, --maxiter, --shots per evaluation).
-  3. Final evaluation at the optimized angles: exact energy (no shots) and an independent
+  2. Optimization, chosen by --mode (Report 05 feedback, cases A/B/C):
+       none  (A) no optimization: the perturbed grid point is evaluated as it is
+       shots (B) COBYLA on the energy estimated with --shots shots per evaluation (run_qaoa)
+       exact (C) COBYLA on the exact energy (statevector expectation value, no shot noise)
+     B and C use the same COBYLA settings (--maxiter, tol 1e-6).
+  3. Final evaluation at the final angles: exact energy (no shots) and an independent
      sampling of --final-shots shots -> P(optimum), P(feasible), mean size of the valid
-     solutions, best solution found, number of evaluations, times.
+     solutions, approximation ratios, TTS99, best solution found, number of evaluations, times.
+     The exact energy of the initial point is saved too, so each seed has
+     delta_E = E_final - E_initial (negative = the optimization improved the point).
 
 The graph can differ from the grid's (--nodes / --start-node / --tolerance): the grid angles are
 then transferred to another instance (generalization test). The optimum is always certified by the
@@ -23,6 +29,7 @@ interrupted campaign still has balanced data across depths.
 Usage (from the repo root):
     PYTHONPATH=src python -u src/experiments/run_campaign.py --name exp1_depth --depths 3,4,5,6 --seeds 20
     PYTHONPATH=src python -u src/experiments/run_campaign.py --name exp3_interp --depths 5,6 --seeds 10 --extend interp
+    PYTHONPATH=src python -u src/experiments/run_campaign.py --name abc_C --depths 3 --seeds 20 --mode exact
     PYTHONPATH=src python -u src/experiments/campaign_report.py      # tables of every campaign
 """
 import argparse
@@ -94,7 +101,33 @@ def greedy_mis(n, edges):
     return len(chosen)
 
 
+# ---------- optimization with the exact energy (case C) ----------
+
+def optimize_exact(evaluator, init, p, maxiter):
+    """COBYLA on the exact energy E(betas, gammas), same settings as the shots run (tol 1e-6).
+    init = [beta_0..beta_{p-1}, gamma_0..gamma_{p-1}]. Returns betas, gammas, number of evaluations."""
+    from scipy.optimize import minimize
+    calls = {"n": 0}
+
+    def energy(x):
+        calls["n"] += 1
+        return float(evaluator.energies([(list(x[:p]), list(x[p:]))])[0])
+
+    res = minimize(energy, np.asarray(init, dtype=float), method="COBYLA", tol=1e-6, options={"maxiter": maxiter})
+    return [float(v) for v in res.x[:p]], [float(v) for v in res.x[p:]], calls["n"]
+
+
 # ---------- final evaluation ----------
+
+def tts99(p_opt):
+    """Shots needed for a 99% chance of sampling the optimum at least once:
+    log(1 - 0.99) / log(1 - P(optimum)) (Ronnow et al., Science 2014). None if P(optimum) = 0."""
+    if p_opt <= 0:
+        return None
+    if p_opt >= 1:
+        return 1.0
+    return float(np.log(0.01) / np.log(1.0 - p_opt))
+
 
 def ordered_angles(optimal_parameters, p):
     betas = [optimal_parameters[f"β[{i}]"] for i in range(p)]
@@ -102,10 +135,11 @@ def ordered_angles(optimal_parameters, p):
     return betas, gammas
 
 
-def final_evaluation(model, nodes, edges, exact_cost, p, betas, gammas, opts, shots, seed):
+def final_evaluation(model, nodes, edges, exact_cost, p, betas, gammas, opts, shots, seed, evaluator=None):
     from grid_search_ext import LandscapeEvaluator
     t0 = time.time()
-    e_exact = float(LandscapeEvaluator(model, p, opts).energies([(betas, gammas)])[0])
+    evaluator = evaluator or LandscapeEvaluator(model, p, opts)
+    e_exact = float(evaluator.energies([(betas, gammas)])[0])
     circ = QAOAAnsatz(model.to_sparse_pauli_op(), reps=p)
     circ.measure_all()
     by_name = {q.name: q for q in circ.parameters}
@@ -117,12 +151,18 @@ def final_evaluation(model, nodes, edges, exact_cost, p, betas, gammas, opts, sh
     best = best_feasible_or_none(cands)
     p_feas = feasible_probability(cands)
     valid = [c for c in cands if not c.violations]
+    mis_size = -exact_cost
+    p_opt = float(sum(c.probability for c in valid if c.cost == exact_cost))
+    valid_mass = float(sum(c.probability * c.selected for c in valid))  # invalid samples count as size 0
     return {
         "final_shots": shots,
         "E_exact_final": e_exact,
-        "P_optimum": float(sum(c.probability for c in valid if c.cost == exact_cost)),
+        "P_optimum": p_opt,
         "P_feasible": p_feas,
-        "mean_valid_size": float(sum(c.probability * c.selected for c in valid) / p_feas) if p_feas > 0 else None,
+        "mean_valid_size": valid_mass / p_feas if p_feas > 0 else None,
+        "approx_ratio_all": valid_mass / mis_size,  # mean size / MIS, invalid samples = 0
+        "approx_ratio_valid": valid_mass / p_feas / mis_size if p_feas > 0 else None,  # valid samples only
+        "TTS99_shots": tts99(p_opt),
         "best_cost": best.cost if best else None,
         "best_size": best.selected if best else None,
         "hit_optimum": bool(best and best.cost == exact_cost),
@@ -143,6 +183,9 @@ if __name__ == "__main__":
     ap.add_argument("--extend", choices=["zeros", "perturb", "interp"], default="zeros", help="how to fill layers beyond the grid")
     ap.add_argument("--extend-sigma", type=float, default=0.05, help="range (rad) of the random new layers with --extend perturb")
     ap.add_argument("--perturb", type=float, default=0.05, help="per-seed uniform perturbation of all initial angles (rad); 0 = none")
+    ap.add_argument("--mode", choices=["shots", "exact", "none"], default="shots",
+                    help="optimization: shots = COBYLA with --shots per evaluation (B), exact = COBYLA on the exact "
+                         "energy (C), none = no optimization, evaluate the initial point (A)")
     ap.add_argument("--maxiter", type=int, default=300)
     ap.add_argument("--shots", type=int, default=1024, help="shots per COBYLA evaluation")
     ap.add_argument("--final-shots", type=int, default=10_000, help="independent shots of the final evaluation")
@@ -189,8 +232,11 @@ if __name__ == "__main__":
     seeds = list(range(1, args.seeds + 1))
     print(f"\n{'=' * 70}\nCAMPAIGN {args.name} | {len(nodes)} nodes, {len(edges)} edges | MIS {-exact_cost:.0f} "
           f"(ILP {ilp_s:.3f} s, greedy {greedy}) | p={depths} | seeds 1..{args.seeds}\n"
-          f"grid {grid_dir.name} (layers <= {args.grid_max_layer}) | extend {args.extend} | perturb +-{args.perturb} | {opts}\n{'=' * 70}", flush=True)
+          f"grid {grid_dir.name} (layers <= {args.grid_max_layer}) | extend {args.extend} | perturb +-{args.perturb} "
+          f"| mode {args.mode} | {opts}\n{'=' * 70}", flush=True)
 
+    from grid_search_ext import LandscapeEvaluator
+    evaluators = {}  # one exact-energy evaluator per depth (transpiled once)
     t_campaign = time.time()
     for s in seeds:
         for p in depths:
@@ -198,29 +244,46 @@ if __name__ == "__main__":
             if (run_dir / "summary.json").exists():
                 print(f"  p={p} seed {s:02d}: already done, skipping")
                 continue
+            if p not in evaluators:
+                evaluators[p] = LandscapeEvaluator(model, p, opts)
+            ev = evaluators[p]
             init, k = initial_point(grid, p, args.grid_max_layer, args.extend, args.perturb, args.extend_sigma, seed=1000 * p + s)
+            t_init = time.time()
+            e_init = float(ev.energies([(init[:p], init[p:])])[0])  # exact energy of the (perturbed) start point
+            init_eval_s = time.time() - t_init
+
             t_opt = time.time()
-            with contextlib.redirect_stdout(io.StringIO()):  # run_qaoa prints every iteration
-                result = run_qaoa(model, reps=p, shots=args.shots, seed=s, maxiter=args.maxiter,
-                                  optimizer_name="COBYLA", initial_point=init)
+            e_cobyla = None
+            if args.mode == "shots":
+                with contextlib.redirect_stdout(io.StringIO()):  # run_qaoa prints every iteration
+                    result = run_qaoa(model, reps=p, shots=args.shots, seed=s, maxiter=args.maxiter,
+                                      optimizer_name="COBYLA", initial_point=init)
+                betas, gammas = ordered_angles(result.optimal_parameters, p)
+                n_evals, e_cobyla = len(result.history), result.expectation_qubo
+            elif args.mode == "exact":
+                betas, gammas, n_evals = optimize_exact(ev, init, p, args.maxiter)
+            else:  # none
+                betas, gammas, n_evals = list(init[:p]), list(init[p:]), 0
             opt_s = time.time() - t_opt
-            betas, gammas = ordered_angles(result.optimal_parameters, p)
-            final = final_evaluation(model, nodes, edges, exact_cost, p, betas, gammas, opts, args.final_shots, s)
+
+            final = final_evaluation(model, nodes, edges, exact_cost, p, betas, gammas, opts, args.final_shots, s, evaluator=ev)
             grid_used_min = sum(m for kk, m in grid_minutes.items() if m and int(kk[1:]) <= k)
             summary = {
-                "campaign": args.name, "p": p, "seed": s, "n_nodes": len(nodes), "n_edges": len(edges),
+                "campaign": args.name, "mode": args.mode, "p": p, "seed": s, "n_nodes": len(nodes), "n_edges": len(edges),
                 "exact_cost": exact_cost, "grid": grid_dir.name, "grid_layers_used": k, "extend": args.extend,
                 "perturb": args.perturb, "initial_point": init,
-                "expectation_qubo_opt": result.expectation_qubo,  # last COBYLA estimate (with shots)
-                "n_evaluations": len(result.history), "optimize_s": opt_s,
+                "E_exact_initial": e_init, "init_eval_s": init_eval_s,
+                "expectation_qubo_opt": e_cobyla,  # last COBYLA estimate (shots mode only)
+                "n_evaluations": n_evals, "optimize_s": opt_s,
                 "grid_minutes_shared": grid_used_min,  # one-off cost of the grid layers used (shared by all runs)
                 "total_run_s": opt_s + final["final_eval_s"],
                 "final_betas": betas, "final_gammas": gammas,
                 "backend_options": opts, **final,
+                "delta_E": final["E_exact_final"] - e_init,
             }
             run_dir.mkdir(parents=True, exist_ok=True)
             (run_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-            print(f"  p={p} seed {s:02d}: E_exact {final['E_exact_final']:8.3f} | best {final['best_cost']} "
-                  f"| P(opt) {final['P_optimum']:.4f} | P(feas) {final['P_feasible']:.3f} | evals {len(result.history)} "
-                  f"| {opt_s / 60:.1f} min", flush=True)
+            print(f"  p={p} seed {s:02d}: E_init {e_init:8.3f} -> E_final {final['E_exact_final']:8.3f} "
+                  f"(dE {summary['delta_E']:+.3f}) | best {final['best_cost']} | P(opt) {final['P_optimum']:.4f} "
+                  f"| P(feas) {final['P_feasible']:.3f} | evals {n_evals} | {opt_s / 60:.1f} min", flush=True)
     print(f"\nCampaign {args.name} done in {(time.time() - t_campaign) / 60:.1f} min -> {out}")
