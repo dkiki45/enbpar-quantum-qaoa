@@ -4,7 +4,7 @@ Aer simulator settings shared by every experiment (method, device, precision).
 The defaults in config.py (matrix_product_state, CPU, double) produce exactly the same
 backend options as before this module existed, so old results stay comparable and the
 result folders keep their old names. Any other combination gets a folder suffix, so
-SKIP_COMPLETED_RUNS never mixes runs from different simulators.
+runs from different simulators never share a folder.
 """
 
 LEGACY = ("matrix_product_state", "CPU", "double")

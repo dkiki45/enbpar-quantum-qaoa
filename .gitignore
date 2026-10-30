@@ -13,3 +13,7 @@ env/
 
 explicacao_*.txt
 resumo_reuniao*.txt
+
+# Experiment outputs (large; keep them out of git)
+src/results/
+logs/

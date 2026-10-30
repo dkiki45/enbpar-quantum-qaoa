@@ -47,6 +47,7 @@ from core.graph_builder import build_graph_from_csv
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.classical_baseline import solve_exact_ilp
 from core.qaoa_solver import run_qaoa, FastAerSampler
+from core.evaluators import LandscapeEvaluator
 from core.solution_decoder import decode_distribution, best_feasible_or_none, feasible_probability
 from core.sim_backend import backend_options, check_gpu
 
@@ -61,7 +62,7 @@ def interp_layer(angles):
 
 
 def initial_point(grid_summary, p, max_layer, extend, perturb, extend_sigma, seed):
-    """[beta_0..beta_{p-1}, gamma_0..gamma_{p-1}], same order as run_warm_start.py."""
+    """[beta_0..beta_{p-1}, gamma_0..gamma_{p-1}], same order as the QAOAAnsatz parameters (betas, then gammas)."""
     available = sorted(int(k[1:]) for k in grid_summary if k.startswith("p") and k[1:].isdigit())
     usable = [k for k in available if k <= min(p, max_layer)]
     if not usable:
@@ -136,7 +137,6 @@ def ordered_angles(optimal_parameters, p):
 
 
 def final_evaluation(model, nodes, edges, exact_cost, p, betas, gammas, opts, shots, seed, evaluator=None):
-    from grid_search_ext import LandscapeEvaluator
     t0 = time.time()
     evaluator = evaluator or LandscapeEvaluator(model, p, opts)
     e_exact = float(evaluator.energies([(betas, gammas)])[0])
@@ -235,7 +235,6 @@ if __name__ == "__main__":
           f"grid {grid_dir.name} (layers <= {args.grid_max_layer}) | extend {args.extend} | perturb +-{args.perturb} "
           f"| mode {args.mode} | {opts}\n{'=' * 70}", flush=True)
 
-    from grid_search_ext import LandscapeEvaluator
     evaluators = {}  # one exact-energy evaluator per depth (transpiled once)
     t_campaign = time.time()
     for s in seeds:

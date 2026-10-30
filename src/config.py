@@ -9,16 +9,10 @@ LIMIT_NODES = 30        # Number of nodes in the subgraph = number of qubits
 START_NODE = 30         # CSV index of the node where the connected subgraph selection (BFS) starts
 CSV_PATH = "src/data/paranainterativo.csv"
 
-# 2. STATISTICAL PARAMETERS 
+# 2. SHOTS (default of bench_devices.py; the campaign sets its own with --shots)
 SHOTS_PER_EVAL = 1024
-SEEDS_TO_TEST = list(range(1,5))  
 
-# 3. CIRCUIT PARAMETERS
-# Depths for the blind test (Random initialization)
-DEPTHS_STANDARD = [1, 2, 3]
-# Depths for the guided test (Warm-Start)
-DEPTHS_WARM_START = [3, 4, 5, 6]
-
+# 3. SIMULATOR (defaults; run_campaign.py, grid_search_ext.py and scripts/campaign.sh pass --method/--device)
 # Aer simulation method: "statevector" (exact, RAM = 16 bytes * 2^n -> up to 32 qubits on 128 GB)
 # or "matrix_product_state" (exact, memory depends on entanglement -> can go beyond 32 qubits)
 SIMULATION_METHOD = "matrix_product_state"
@@ -32,23 +26,6 @@ SIMULATION_DEVICE = "CPU"
 SIMULATION_PRECISION = "double"
 # GPU only: use NVIDIA cuStateVec (cuQuantum) kernels instead of Aer's own. Compare both with bench_devices.py
 SIMULATION_CUSTATEVEC = False
-# Any setup other than MPS + CPU + double writes to result folders with a suffix
-# (e.g. warm_start_n30_COBYLA_statevector_GPU), so GPU runs never overwrite or skip CPU runs.
 
-# Initial angles used by run_warm_start.py:
-#   "v3"  -> v3_grid_search/warm_start.json from grid_search.py (layers 1-2; deeper layers start at 0)
-#   "ext" -> summary.json from grid_search_ext.py (best angles of every layer it searched, e.g. 1-3;
-#            deeper layers start at 0). Results go to folders ending in "_gridext".
-WARM_START_SOURCE = "v3"
-# grid_search_ext.py results folder, relative to RESULTS_BASE_DIR (None = n<LIMIT_NODES>_statevector_GPU)
-WARM_START_EXT_DIR = None
-
-# Skip (seed, depth) runs that already have a summary.json, so an interrupted
-# experiment resumes where it stopped. Delete the results folder to rerun from scratch.
-SKIP_COMPLETED_RUNS = True
-
-# 4. OPTIMIZERS
-AVAILABLE_OPTIMIZERS = ["COBYLA", "SPSA"]
-
-# 5. BASE DIRECTORIES
+# 4. BASE DIRECTORIES
 RESULTS_BASE_DIR = Path("src/results")

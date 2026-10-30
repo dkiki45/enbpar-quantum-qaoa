@@ -1,120 +1,72 @@
 # Research Project: Quantum Optimization for LED Retrofitting (ENBPar)
 *PIBIC PUCPR - Student: David Bobato Kikina | Advisors: Profs. Jonas Krause and Rodrigo Pasti*
 
-> *Note: The `main` branch contains the formal QAOA architecture (Phases P0 & P1). The legacy classical heuristic optimizers are archived in the `v1-otimizadores-heuristicos` branch.*
+This repository maps public lighting planning as a **Maximum Independent Set (MIS)** problem: choose the largest set of streetlights with no two closer than a conflict distance. It is solved with **QAOA** (Qiskit) and checked against an exact classical solver (ILP).
 
-This repository maps public lighting planning as a **Maximal Independent Set (MIS)** mathematical problem. The goal is to use the **QAOA** quantum algorithm to find the maximum number of streetlights that can remain active without their illumination areas overlapping spatially.
+> **Branches**
+> * `main`: the current pipeline only (extended grid search, campaign runner, reports).
+> * `arquivo-campanha-gpu`: frozen snapshot of the code that produced Reports 04 to 06, including the older scripts removed from `main` (`grid_search.py`, `run_warm_start.py`, `run_qaoa.py`, `spsa_study.py`, `plot_analysis.py`, `validate_samplers.py`, `qaoa_circuit.py`, `graph_visualization.py`).
+> * `v1-otimizadores-heuristicos`: the legacy classical heuristic optimizers.
 
-**Phase P0: Formal QAOA Implementation**
-* **QUBO to Ising:** Exact mathematical conversion using `SparsePauliOp` ($Z$ and $ZZ$ matrices).
-* **Quantum Circuit:** Explicit Ansatz alternating Cost ($RZZ$) and Mixer ($RX$) gates.
-* **Hybrid Engine:** Integration of the `COBYLA` classical optimizer with the `StatevectorSampler` quantum simulator.
-* **Geographic Data:** Reading real CSV coordinates and calculating physical distance constraints via the Haversine formula.
-* **Absolute Validation:** Solution decoder paired with an exact brute-force algorithm to certify the accuracy rate.
+## Pipeline
 
-**Phase P1: Scale, Metrics & Geospatial Integration**
-* **Geospatial Payload:** Upgraded the solution decoder to map the optimal quantum bitstring back to the real-world IPPUC geographic coordinates (`id`, `latitude`, `longitude`), outputting a JSON ready for map plotting.
-* **Optimizer Benchmark:** Executed a comparative analysis between `COBYLA` (gradient-free) and `SPSA` (stochastic). Proved that `COBYLA` strictly dominates in ideal, noiseless local simulations.
-* **Circuit Depth Analysis:** Evaluated quantum depths ($p=1, 2, 3$) across multiple random seeds. Confirmed that shallow circuits ($p=1$) converge optimally under current noiseless constraints.
-* **Graph Density Control:** Scaled up problem complexity by manipulating the Haversine tolerance factor, verifying the QAOA solver's efficacy on non-trivial, highly connected interference graphs.
+1. **Problem:** `src/core/graph_builder.py` reads the streetlight CSV, builds the conflict graph (Haversine distance, 20 m × tolerance) and takes a BFS-connected subgraph of `LIMIT_NODES` vertices from `START_NODE`. `src/core/qubo_formalization.py` builds the MIS QUBO (penalty α = 1, β = 2) and its Ising form.
+2. **Exact reference:** `src/core/classical_baseline.py` solves the MIS with ILP (`scipy.optimize.milp`, HiGHS); a min-degree greedy heuristic is recorded too.
+3. **Initial angles:** `src/experiments/grid_search_ext.py` searches the exact QAOA energy landscape layer by layer (50×50 grid + zoom, up to p = 3) and saves the best angles (`summary.json`).
+4. **Campaign:** `src/experiments/run_campaign.py` starts QAOA from the grid angles (per-seed perturbation of ±0.05 rad) and runs one of three modes:
+   * `--mode none` (A): no optimization, evaluate the grid point;
+   * `--mode shots` (B): COBYLA on the energy estimated with `--shots` shots;
+   * `--mode exact` (C): COBYLA on the exact statevector energy.
 
-**Phase P2: Scaling Beyond 30 Qubits**
-* **Exact ILP Baseline:** Replaced the $O(2^n)$ brute-force validator with an exact Integer Linear Programming solver (`scipy.optimize.milp`, HiGHS branch-and-bound): maximize $\sum_i x_i$ subject to $x_i + x_j \le 1$ for every edge $(i, j)$, $x_i \in \{0, 1\}$. It proves optimality like brute force (same `exact_cost`, checked in `tests/test_exact_solvers.py`) but solves the full 125-node connected component in milliseconds. With ties, `exact_bits` may be a different optimal set with the same cardinality.
-* **Connected Subgraph Selection:** The interference graph is a BFS-connected subgraph with `LIMIT_NODES` vertices starting from `START_NODE`.
-* **Aer Simulation Backend:** `qiskit-aer` `SamplerV2` with a configurable `SIMULATION_METHOD`: `statevector` (exact, $16 \cdot 2^n$ bytes of RAM, up to 32 qubits on a 128 GB machine) or `matrix_product_state` (exact, memory scales with entanglement instead of qubit count).
+   Every run ends with the same evaluation: exact energy, 10k independent shots, P(optimum), P(feasible), approximation ratios, TTS99 and times.
+5. **Reports:** `src/experiments/campaign_report.py` (tables of every campaign) and `src/experiments/abc_report.py` (paired A/B/C comparison with 95% CIs and plot).
 
-**Phase P3: GPU Acceleration & Scaling Tools**
-* **GPU Simulation:** `SIMULATION_DEVICE = "GPU"` runs the Aer `statevector` method on an NVIDIA GPU (`qiskit-aer-gpu-cu11`, same Aer 0.17.2 as the CPU build, installed in a separate env from `requirements-gpu.txt`). `matrix_product_state` has no GPU implementation. A 30-qubit statevector needs 16 GB in double precision (8 GB in single).
-* **Separate Result Folders:** any simulator other than MPS + CPU + double writes to folders with a suffix (e.g. `warm_start_n30_COBYLA_statevector_GPU`), so `SKIP_COMPLETED_RUNS` never mixes or skips runs from different simulators. Every `summary.json` records the simulator used.
-* **CPU vs GPU Benchmark (`bench_devices.py`):** time and memory of one QAOA evaluation for MPS-CPU, statevector-CPU and statevector-GPU (with/without cuStateVec, single precision), same circuit, angles and shots, for $p = 1 \dots 6$.
-* **ILP Limits (`ilp_limits.py`):** how far the exact baseline scales on the real streetlight graph, geometric graphs and dense random graphs, reporting proven optimality or the remaining gap at a time limit.
-* **Deeper Circuits:** warm-start now runs $p = 3, 4, 5, 6$.
-* **Extended Grid Search (`grid_search_ext.py`):** exact (shot-free) QAOA energy landscape on fine grids, layer by layer up to $p$ = `--max-p`, with zoom refinement, sampling at the best angles (P(feasible), P(optimum) vs ILP) and resume support. Works with `statevector` or `tensor_network` on the GPU.
-* **Tensor Network:** `SIMULATION_METHOD = "tensor_network"` (GPU only, NVIDIA cuTensorNet). `bench_devices.py` reports the exact energy of every method at the same angles, so tensor network and statevector can be compared directly.
-* **Standalone GPU Test (`gpu_test.py`):** checks the GPU and compares CPU vs GPU time for 20-30 qubits, no project code needed.
+Shared engine: `src/core/qaoa_solver.py` (`FastAerSampler`, `run_qaoa`), `src/core/evaluators.py` (exact and shot-based energy evaluators), `src/core/sim_backend.py` (Aer method/device options, GPU check), `src/core/solution_decoder.py` (feasibility and probabilities).
 
-**Branch `motor-quantico-led`: the quantum engine applied to the LED (MIS) problem**
-* `main` keeps the reference code; this branch carries the LED-specific work.
-* **Warm-start from the extended grid:** `WARM_START_SOURCE = "ext"` makes `run_warm_start.py` start from the best angles of every layer found by `grid_search_ext.py` (e.g. $p=1..3$); deeper layers start at 0. Results go to `warm_start_n<N>_<optimizer>..._gridext`, separate from the `"v3"` runs.
+Tools: `src/experiments/bench_devices.py` (CPU vs GPU vs tensor network timing), `src/experiments/ilp_limits.py` (how far the ILP scales), `scripts/gpu_test.py` (standalone GPU check).
 
-**Problem-specific (LED / MIS) parts of the code** — what changes to apply the engine to another binary problem:
-* `src/core/graph_builder.py`: reads the streetlight CSV, builds the conflict graph (Haversine distance) and the BFS subgraph.
-* `src/core/qubo_formalization.py`: `build_mis_qubo`, `classical_cost`, `conflicting_edges` (MIS objective and penalty $\alpha=1$, $\beta=2$). `IsingModel` and `qubo_to_ising` are generic.
-* `src/core/classical_baseline.py`: exact MIS solvers (ILP $x_i + x_j \le 1$, brute force).
-* `src/core/solution_decoder.py`: feasibility = no conflicting edge, mapping back to streetlight coordinates (`integer_to_bits` and the probability helpers are generic).
-* `src/core/graph_visualization.py` and `plot_analysis.py`: geographic plots of the streetlights.
-* `src/config.py`: `CSV_PATH`, `LIMIT_NODES`, `START_NODE`.
-* Experiment scripts (`run_qaoa.py`, `run_warm_start.py`, `grid_search*.py`, `spsa_study.py`, `validate_samplers.py`, `bench_devices.py`) call the functions above to build the problem; `ilp_limits.py` is MIS-only.
-* Generic engine (no change needed): `qaoa_solver.py`, `sim_backend.py`, `qaoa_circuit.py`, the GPU/benchmark tooling and the warm-start/grid machinery.
+## Configuration (`src/config.py`)
 
-**Configuration (`src/config.py`)**
-* `LIMIT_NODES`: number of vertices in the subgraph = number of qubits.
-* `START_NODE`: CSV index where the BFS subgraph selection starts.
-* `SIMULATION_METHOD`: `"statevector"` or `"matrix_product_state"`.
-* `SIMULATION_DEVICE`: `"CPU"` or `"GPU"` (GPU requires `"statevector"`).
-* `SIMULATION_PRECISION`: `"double"` or `"single"` (statevector only; single halves the memory).
-* `SIMULATION_CUSTATEVEC`: GPU only, use NVIDIA cuStateVec kernels.
-* `SKIP_COMPLETED_RUNS`: resume interrupted experiments by skipping runs that already have a `summary.json`.
-* `SEEDS_TO_TEST`, `DEPTHS_STANDARD`, `DEPTHS_WARM_START`, `SHOTS_PER_EVAL`: experiment grid.
+* `LIMIT_NODES`, `START_NODE`, `CSV_PATH`: the instance (number of qubits and where the subgraph starts).
+* `SIMULATION_METHOD`, `SIMULATION_DEVICE`, `SIMULATION_PRECISION`, `SIMULATION_CUSTATEVEC`: Aer defaults. The campaign and the grid search take `--method` / `--device` instead.
+* `SHOTS_PER_EVAL`: default shots of `bench_devices.py`.
+* `RESULTS_BASE_DIR`: results folder (`src/results/`, ignored by git, like `logs/`).
 
-**Directory Structure**
-* `src/core/`: All quantum physics logic, graph processing, and solution decoding.
-* `src/experiments/run_qaoa.py`: Main orchestrator file to run the simulation and generate JSON/graph reports.
-* `tests/`: Rigorous test suite ensuring mathematical and structural parity of the project.
+## How to Run
 
-**How to Run**
-
-Install the dependencies (Python 3.11 recommended):
+CPU install (Python 3.11):
 ```bash
 pip install -r requirements.txt
-```
-
-Run the end-to-end main simulation (optimizer: `COBYLA` by default, or `SPSA`):
-```bash
-PYTHONPATH=src python src/experiments/run_qaoa.py COBYLA
-```
-
-Run the validation test suite:
-```bash
 PYTHONPATH=src pytest
 ```
 
-Warm-start pipeline (grid search for $p=1,2$ angles, then deeper circuits):
-```bash
-PYTHONPATH=src python src/experiments/grid_search.py
-PYTHONPATH=src python src/experiments/run_warm_start.py COBYLA
-```
-
-**GPU (NVIDIA, Linux only)**
-
-Create a separate env so CPU runs are not affected, then check the GPU:
+GPU (NVIDIA, Linux), in a separate env:
 ```bash
 conda create -n qaoa-gpu --clone qaoa -y
 conda activate qaoa-gpu
 pip uninstall -y qiskit-aer
 pip install -r requirements-gpu.txt
-nvidia-smi    # must show the GPU table, not an error
+python scripts/gpu_test.py      # checks the GPU and compares CPU vs GPU time
 ```
 
-CPU vs GPU benchmark, then a GPU warm-start run (set `SIMULATION_METHOD = "statevector"` and `SIMULATION_DEVICE = "GPU"` in `src/config.py` first):
-```bash
-PYTHONPATH=src python -u src/experiments/bench_devices.py
-PYTHONPATH=src python -u src/experiments/run_warm_start.py COBYLA
-```
-
-Extended grid search on the GPU (check the time first with `--estimate`):
+Extended grid search (check the time first with `--estimate`):
 ```bash
 PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector --device GPU --estimate
 PYTHONPATH=src python -u src/experiments/grid_search_ext.py --method statevector --device GPU --max-p 3
 ```
 
-Report 04 feedback campaign (GPU, ~52 h, resumable): depth with 20 seeds, grid effects, layer expansion and generalization, each run re-evaluated with exact energy and 10k independent shots (P(optimum), P(feasible), valid size, evaluations, time):
+Campaigns (run inside tmux; every step resumes after a crash):
 ```bash
-bash scripts/campaign.sh smoke   # ~5 min check first
-bash scripts/campaign.sh all     # exp1 -> exp2 -> exp3 -> exp4 -> report (src/results/campaign/report.md)
+bash scripts/campaign.sh smoke       # ~5 min check with 12 qubits
+bash scripts/campaign.sh all         # Report 05: depth, grid effects, extra layers, generalization, report
+bash scripts/campaign.sh smoke_abc   # ~5 min check of the A/B/C modes
+bash scripts/campaign.sh abc         # Report 06: A/B/C at p = 3, 20 seeds, paired report
 ```
 
-ILP scaling limits:
+Benchmarks:
 ```bash
+PYTHONPATH=src python -u src/experiments/bench_devices.py
 PYTHONPATH=src python -u src/experiments/ilp_limits.py --kinds csv,geo,er3,er6 --sizes 30,60,125,250,500,1000
 ```
+
+Note: `grid_search_ext.py` always builds the graph from `START_NODE` with tolerance 2.0 (40 m). The generalization runs (`--start-node`, `--tolerance` in `run_campaign.py`) reuse those angles on other graphs on purpose.

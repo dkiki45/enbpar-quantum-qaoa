@@ -59,7 +59,7 @@ class FastAerSampler(SamplerV2):
         self._transpiled_cache = {}
 
     def run(self, pubs, **kwargs):
-        # Shots: run(shots=...), else options.default_shots (set by grid_search.py), else the constructor value
+        # Shots: run(shots=...), else options.default_shots (if set), else the constructor value
         default_shots = kwargs.get("shots") or getattr(self.options, "default_shots", None) or self.default_shots
         new_pubs = []
         for pub in pubs:
@@ -90,10 +90,6 @@ class FastAerSampler(SamplerV2):
             )
 
         return super().run(new_pubs, **kwargs)
-
-
-class GridSearchSampler(FastAerSampler):
-    """Kept for grid_search.py: the safe cache now lives in FastAerSampler."""
 
 
 def run_qaoa(model, reps=1, shots=4096, seed=2, maxiter=300, optimizer_name="COBYLA", initial_point=None, sim_method=None,
