@@ -32,3 +32,16 @@ def test_random_baseline_chance_level():
     rb = random_baseline(3, [(0, 1), (1, 2)], -2.0, shots=200_000, seed=1)
     assert rb["P_feasible"] == pytest.approx(5 / 8, abs=0.01)   # 5 of the 8 bitstrings are independent sets
     assert rb["P_optimum"] == pytest.approx(1 / 8, abs=0.01)
+
+
+def test_repair_makes_independent_set_and_completes_it():
+    from collections import defaultdict
+    import numpy as np
+    from ibm_analysis import repair, bits_from_key
+    adj = defaultdict(set)
+    for u, v in [(0, 1), (1, 2), (2, 3)]:                 # path 0-1-2-3, MIS size 2
+        adj[u].add(v)
+        adj[v].add(u)
+    assert repair(np.array([1, 1, 1, 1], dtype=np.int8), adj) == 2   # all chosen -> repaired to a MIS
+    assert repair(np.array([0, 0, 0, 0], dtype=np.int8), adj) == 2   # empty -> greedy completion
+    assert list(bits_from_key("0011", 4)) == [1, 1, 0, 0]            # Qiskit order: qubit 0 on the right
