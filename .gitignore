@@ -17,3 +17,7 @@ resumo_reuniao*.txt
 # Experiment outputs (large; keep them out of git)
 src/results/
 logs/
+
+# IBM Quantum credentials: never commit API keys
+ibm_setup.py
+qiskit-ibm.json

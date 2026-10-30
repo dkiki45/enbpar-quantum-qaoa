@@ -23,6 +23,8 @@ This repository maps public lighting planning as a **Maximum Independent Set (MI
 
 Shared engine: `src/core/qaoa_solver.py` (`FastAerSampler`, `run_qaoa`), `src/core/evaluators.py` (exact and shot-based energy evaluators), `src/core/sim_backend.py` (Aer method/device options, GPU check), `src/core/solution_decoder.py` (feasibility and probabilities).
 
+IBM hardware: `src/core/ibm_runner.py` (transpile for an IBM backend and sample in the Z basis, adapted from the advisors' `angles_estimation_ibm.py`) and `src/experiments/run_ibm.py` (fixed-angle QAOA on 30 or 156 qubits, `--dry-run` reports the circuit size without spending QPU time).
+
 Tools: `src/experiments/bench_devices.py` (CPU vs GPU vs tensor network timing), `src/experiments/ilp_limits.py` (how far the ILP scales), `scripts/gpu_test.py` (standalone GPU check).
 
 ## Configuration (`src/config.py`)
@@ -62,6 +64,16 @@ bash scripts/campaign.sh all         # Report 05: depth, grid effects, extra lay
 bash scripts/campaign.sh smoke_abc   # ~5 min check of the A/B/C modes
 bash scripts/campaign.sh abc         # Report 06: A/B/C at p = 3, 20 seeds, paired report
 ```
+
+IBM Quantum hardware (fixed angles from the simulations, Z-basis sampling only):
+```bash
+pip install qiskit-ibm-runtime
+python ibm_setup.py                  # once, outside the repo, with your own API key (never commit it)
+PYTHONPATH=src python -u src/experiments/run_ibm.py --name dry30 --nodes 30 --fake FakeFez --dry-run       # circuit size, no account needed
+PYTHONPATH=src python -u src/experiments/run_ibm.py --name dry156 --nodes 156 --graph components --fake FakeFez --dry-run
+PYTHONPATH=src python -u src/experiments/run_ibm.py --name n30_grid --nodes 30 --angles grid               # QPU run
+```
+Results go to `src/results/ibm/<name>/` (summary with P(optimum), P(feasible), approximation ratio, TTS99, QPU seconds, plus the random-sampling chance level).
 
 Benchmarks:
 ```bash

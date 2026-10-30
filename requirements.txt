@@ -14,6 +14,7 @@
 qiskit==2.5.2              # QuantumCircuit, transpile, SparsePauliOp, Statevector, SamplerPub
 qiskit-aer==0.17.2         # qiskit_aer.primitives.SamplerV2 (NVIDIA GPU: see requirements-gpu.txt)
 qiskit-algorithms==0.4.0   # QAOA, COBYLA, SPSA, Optimizer
+qiskit-ibm-runtime==0.51.0 # IBM Quantum hardware (run_ibm.py, ibm_runner.py)
 
 # --- data/Scientific ---
 numpy==2.4.6
