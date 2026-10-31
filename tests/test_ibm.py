@@ -45,3 +45,20 @@ def test_repair_makes_independent_set_and_completes_it():
     assert repair(np.array([1, 1, 1, 1], dtype=np.int8), adj) == 2   # all chosen -> repaired to a MIS
     assert repair(np.array([0, 0, 0, 0], dtype=np.int8), adj) == 2   # empty -> greedy completion
     assert list(bits_from_key("0011", 4)) == [1, 1, 0, 0]            # Qiskit order: qubit 0 on the right
+
+
+def test_ghz_circuit_and_population():
+    from ghz_test import ghz_circuit, ghz_population
+    qc = ghz_circuit(4)
+    assert sum(1 for i in qc.data if i.operation.num_qubits == 2) == 3     # n - 1 two-qubit gates
+    pop = ghz_population({"0000": 45, "1111": 45, "0101": 10}, 4)
+    assert pop["P_ghz"] == pytest.approx(0.9) and pop["chance"] == pytest.approx(2 / 16)
+
+
+def test_transpile_best_keeps_highest_esp_on_fake_backend():
+    from core.ibm_runner import IBMRunner
+    from ghz_test import ghz_circuit
+    runner = IBMRunner(fake="FakeFez", min_qubits=5)
+    isa, stats, _ = runner.transpile_best(ghz_circuit(5), tries=4)
+    assert stats["two_qubit_gates"] == 4                                   # a chain fits without SWAPs
+    assert 0 < stats["esp"] <= 1 and stats["esp"] == pytest.approx(stats["esp_range"][1])

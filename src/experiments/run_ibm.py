@@ -12,7 +12,8 @@ One run = one graph + one set of angles:
        --angles campaign   final angles of one campaign run (e.g. abc_C, optimized with exact energy)
        --angles file       a JSON file {"betas": [...], "gammas": [...]}
   3. Circuit: QAOAAnsatz of the MIS QUBO with those angles, Z measurement of every qubit,
-     transpiled for the backend (depth and two-qubit gates are saved).
+     transpiled --tries times for the backend; the one with the highest estimated success
+     probability (ESP, from the backend calibration) is kept (depth, two-qubit gates and ESP saved).
   4. --dry-run: stop here (no QPU time). Otherwise sample --shots on the QPU.
   5. Metrics, as in the campaign: P(optimum), P(feasible), mean valid size, approximation ratios
      and TTS99, against the ILP optimum; plus the greedy MIS and a random-sampling baseline
@@ -42,7 +43,7 @@ from core.graph_builder import build_graph_from_csv, haversine_m
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.classical_baseline import solve_exact_ilp
 from core.solution_decoder import decode_distribution, best_feasible_or_none, feasible_probability
-from core.ibm_runner import IBMRunner, circuit_stats
+from core.ibm_runner import IBMRunner
 from run_campaign import greedy_mis, tts99
 
 
@@ -184,6 +185,7 @@ if __name__ == "__main__":
     ap.add_argument("--backend", default=None, help="e.g. ibm_fez; default: least busy with enough qubits")
     ap.add_argument("--fake", default=None, help="fake backend for --dry-run without an account, e.g. FakeFez")
     ap.add_argument("--optimization-level", type=int, default=3)
+    ap.add_argument("--tries", type=int, default=10, help="transpile this many times and keep the best (highest ESP)")
     ap.add_argument("--dry-run", action="store_true", help="transpile and report the circuit size only (no QPU time)")
     args = ap.parse_args()
     if args.fake and not args.dry_run:
@@ -212,12 +214,13 @@ if __name__ == "__main__":
         raise SystemExit(f"angles have {len(betas)} layers, --p is {args.p}")
 
     runner = IBMRunner(args.backend, min_qubits=n, optimization_level=args.optimization_level, fake=args.fake)
-    isa, transpile_s = runner.transpile(qaoa_circuit(model, betas, gammas))
-    stats = circuit_stats(isa)
+    isa, stats, transpile_s = runner.transpile_best(qaoa_circuit(model, betas, gammas), tries=args.tries)
     print(f"\n{'=' * 70}\nIBM {args.name} | {n} poles, {len(edges)} edges (groups {sizes}) | MIS {-exact_cost:.0f} "
           f"(ILP {ilp_s:.3f} s, greedy {greedy})\nangles {source} | backend {runner.name}"
           f"{' (fake, dry run)' if runner.is_fake else ''} | transpiled in {transpile_s:.1f} s: depth {stats['depth']}, "
-          f"2-qubit depth {stats['depth_2q']}, 2-qubit gates {stats['two_qubit_gates']}\n{'=' * 70}", flush=True)
+          f"2-qubit depth {stats['depth_2q']}, 2-qubit gates {stats['two_qubit_gates']} "
+          f"(range over {stats['tries']} tries: {stats['two_qubit_gates_range']}), ESP {stats['esp']:.3g}\n{'=' * 70}",
+          flush=True)
 
     out = config.RESULTS_BASE_DIR / "ibm" / args.name
     out.mkdir(parents=True, exist_ok=True)
