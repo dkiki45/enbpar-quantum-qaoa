@@ -25,7 +25,7 @@ import warnings
 from qiskit import QuantumCircuit
 
 import config
-from core.ibm_runner import IBMRunner
+from core.ibm_runner import IBMRunner, circuit_stats, estimated_success_probability, fetch_job
 
 
 def ghz_circuit(n):
@@ -55,16 +55,28 @@ if __name__ == "__main__":
     ap.add_argument("--tries", type=int, default=10)
     ap.add_argument("--optimization-level", type=int, default=3)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--job-id", default=None, help="retrieve a job already sent with the same --sizes instead of submitting")
     args = ap.parse_args()
     if args.fake and not args.dry_run:
         raise SystemExit("--fake is only for --dry-run")
 
     sizes = [int(x) for x in args.sizes.split(",")]
+    fetched = None
+    if args.job_id:
+        fetched = fetch_job(args.job_id)
+        args.backend = fetched[1]["backend"]
+        if len(fetched[0]) != len(sizes):
+            raise SystemExit(f"job has {len(fetched[0])} circuits but --sizes has {len(sizes)}")
     runner = IBMRunner(args.backend, min_qubits=max(sizes), optimization_level=args.optimization_level,
                        fake=args.fake)
     rows, circuits = [], []
-    for n in sizes:
-        isa, stats, t = runner.transpile_best(ghz_circuit(n), tries=args.tries)
+    for i, n in enumerate(sizes):
+        if fetched and fetched[2][i] is not None:  # stats of the circuit that actually ran
+            isa, t = fetched[2][i], 0.0
+            stats = circuit_stats(isa) | {"esp": estimated_success_probability(isa, runner.backend.target),
+                                          "from_job": True}
+        else:
+            isa, stats, t = runner.transpile_best(ghz_circuit(n), tries=args.tries)
         circuits.append(isa)
         rows.append({"n": n, "circuit": stats, "transpile_s": t})
         print(f"  n={n:3d}: 2-qubit gates {stats['two_qubit_gates']} (depth {stats['depth_2q']}), "
@@ -75,14 +87,14 @@ if __name__ == "__main__":
     summary = {"name": args.name, "backend": runner.name, "fake_backend": runner.is_fake, "shots": args.shots,
                "tries": args.tries, "optimization_level": args.optimization_level, "dry_run": args.dry_run,
                "sizes": rows}
-    if not args.dry_run:
-        counts, job = runner.run_many(circuits, args.shots)
+    if fetched or not args.dry_run:
+        counts, job = (fetched[0], fetched[1]) if fetched else runner.run_many(circuits, args.shots)
         summary["job"] = job
         for row, c in zip(rows, counts):
             row.update(ghz_population(c, row["n"]))
         (out / "ghz_counts.json").write_text(json.dumps({str(r["n"]): c for r, c in zip(rows, counts)}),
                                              encoding="utf-8")
-        print(f"\n## GHZ on {runner.name} ({args.shots} shots per size, QPU {job['qpu_seconds']} s)")
+        print(f"\n## GHZ on {runner.name} ({job['shots']} shots per size, QPU {job['qpu_seconds']} s)")
         print("| qubits | 2-qubit gates | ESP (predicted) | P(00..0) + P(11..1) measured | chance |")
         print("| --- | --- | --- | --- | --- |")
         for r in rows:

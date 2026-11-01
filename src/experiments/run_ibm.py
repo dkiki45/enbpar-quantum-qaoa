@@ -43,7 +43,7 @@ from core.graph_builder import build_graph_from_csv, haversine_m
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.classical_baseline import solve_exact_ilp
 from core.solution_decoder import decode_distribution, best_feasible_or_none, feasible_probability
-from core.ibm_runner import IBMRunner
+from core.ibm_runner import IBMRunner, circuit_stats, estimated_success_probability, fetch_job
 from run_campaign import greedy_mis, tts99
 
 
@@ -187,6 +187,8 @@ if __name__ == "__main__":
     ap.add_argument("--optimization-level", type=int, default=3)
     ap.add_argument("--tries", type=int, default=10, help="transpile this many times and keep the best (highest ESP)")
     ap.add_argument("--dry-run", action="store_true", help="transpile and report the circuit size only (no QPU time)")
+    ap.add_argument("--job-id", default=None, help="do not submit: retrieve the result of a job already sent with "
+                    "the same arguments (e.g. after the connection dropped while waiting in the queue)")
     args = ap.parse_args()
     if args.fake and not args.dry_run:
         raise SystemExit("--fake is only for --dry-run (fake backends are never used to execute)")
@@ -213,8 +215,17 @@ if __name__ == "__main__":
     if len(betas) != args.p:
         raise SystemExit(f"angles have {len(betas)} layers, --p is {args.p}")
 
+    fetched = None
+    if args.job_id:
+        fetched = fetch_job(args.job_id)
+        args.backend = fetched[1]["backend"]
     runner = IBMRunner(args.backend, min_qubits=n, optimization_level=args.optimization_level, fake=args.fake)
-    isa, stats, transpile_s = runner.transpile_best(qaoa_circuit(model, betas, gammas), tries=args.tries)
+    if fetched and fetched[2] and fetched[2][0] is not None:  # stats of the circuit that actually ran
+        isa, transpile_s = fetched[2][0], 0.0
+        stats = circuit_stats(isa) | {"esp": estimated_success_probability(isa, runner.backend.target),
+                                      "tries": None, "two_qubit_gates_range": None, "from_job": True}
+    else:
+        isa, stats, transpile_s = runner.transpile_best(qaoa_circuit(model, betas, gammas), tries=args.tries)
     print(f"\n{'=' * 70}\nIBM {args.name} | {n} poles, {len(edges)} edges (groups {sizes}) | MIS {-exact_cost:.0f} "
           f"(ILP {ilp_s:.3f} s, greedy {greedy})\nangles {source} | backend {runner.name}"
           f"{' (fake, dry run)' if runner.is_fake else ''} | transpiled in {transpile_s:.1f} s: depth {stats['depth']}, "
@@ -234,7 +245,14 @@ if __name__ == "__main__":
         "transpile_s": transpile_s, "circuit": stats, "dry_run": args.dry_run,
         "random_baseline": random_baseline(n, edges, exact_cost, args.shots),
     }
-    if not args.dry_run:
+    if fetched:
+        counts, job = fetched[0][0], fetched[1]
+        summary["job"] = job
+        summary.update(sample_metrics(counts, n, edges, exact_cost))
+        (out / "counts.json").write_text(json.dumps(counts), encoding="utf-8")
+        print(f"  (retrieved job {args.job_id}) P(opt) {summary['P_optimum']:.4f} | P(feas) {summary['P_feasible']:.3f} "
+              f"| best valid size {summary['best_size']} of {-exact_cost:.0f} | QPU {job['qpu_seconds']} s", flush=True)
+    elif not args.dry_run:
         counts, job = runner.run(isa, args.shots)
         summary["job"] = job
         summary.update(sample_metrics(counts, n, edges, exact_cost))

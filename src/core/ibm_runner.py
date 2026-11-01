@@ -172,3 +172,38 @@ class IBMRunner:
         info = {"job_id": job.job_id(), "backend": self.name, "shots": shots,
                 "qpu_seconds": qpu_seconds, "wall_seconds": time.time() - t0}
         return counts, info
+
+
+def fetch_job(job_id, service=None):
+    """Retrieves a finished job by its id (e.g. after the terminal was closed or the connection dropped).
+    Returns the counts of each circuit, the job information and the transpiled circuits that were
+    submitted (None where they cannot be read back)."""
+    from qiskit import QuantumCircuit
+    from qiskit_ibm_runtime import QiskitRuntimeService
+    service = service or QiskitRuntimeService()
+    job = service.job(job_id)
+    status = str(job.status())
+    if status != "DONE":
+        raise SystemExit(f"Job {job_id} is {status}; wait until it is DONE (see quantum.cloud.ibm.com/workloads)")
+    result = job.result()
+    counts = [r.data.meas.get_counts() for r in result]
+    circuits = []
+    try:
+        for pub in job.inputs.get("pubs", []):
+            c = getattr(pub, "circuit", None)
+            if c is None and isinstance(pub, (list, tuple)) and pub:
+                c = pub[0]
+            circuits.append(c if isinstance(c, QuantumCircuit) else None)
+    except Exception:
+        circuits = []
+    if len(circuits) != len(counts):
+        circuits = [None] * len(counts)
+    try:
+        qpu_seconds = job.usage()
+    except Exception:
+        qpu_seconds = None
+    backend = job.backend()
+    info = {"job_id": job_id, "backend": getattr(backend, "name", str(backend)),
+            "shots": sum(counts[0].values()) if counts else None, "circuits": len(counts),
+            "qpu_seconds": qpu_seconds, "retrieved_by_id": True}
+    return counts, info, circuits
