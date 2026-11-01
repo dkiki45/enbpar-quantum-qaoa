@@ -17,6 +17,7 @@ Usage (from the repo root):
     PYTHONPATH=src python -u src/experiments/ghz_test.py --name ghz_dry --fake FakeFez --dry-run
     PYTHONPATH=src python -u src/experiments/ghz_test.py --name ghz_kingston --backend ibm_kingston
     PYTHONPATH=src python -u src/experiments/ghz_test.py --name ghz_kingston_big --backend ibm_kingston --sizes 60,80,100,156
+    PYTHONPATH=src python -u src/experiments/ghz_test.py --name ghz_kingston_ddtw --backend ibm_kingston --sizes 10,30,50,100 --mitigation dd+twirl
 """
 import argparse
 import json
@@ -25,7 +26,7 @@ import warnings
 from qiskit import QuantumCircuit
 
 import config
-from core.ibm_runner import IBMRunner, circuit_stats, estimated_success_probability, fetch_job
+from core.ibm_runner import MITIGATIONS, IBMRunner, circuit_stats, estimated_success_probability, fetch_job
 
 
 def ghz_circuit(n):
@@ -54,6 +55,8 @@ if __name__ == "__main__":
     ap.add_argument("--fake", default=None, help="fake backend for --dry-run, e.g. FakeFez")
     ap.add_argument("--tries", type=int, default=10)
     ap.add_argument("--optimization-level", type=int, default=3)
+    ap.add_argument("--mitigation", choices=MITIGATIONS, default="none",
+                    help="IBM error mitigation: dynamical decoupling (dd), Pauli twirling (twirl) or both")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--job-id", default=None, help="retrieve a job already sent with the same --sizes instead of submitting")
     args = ap.parse_args()
@@ -68,7 +71,7 @@ if __name__ == "__main__":
         if len(fetched[0]) != len(sizes):
             raise SystemExit(f"job has {len(fetched[0])} circuits but --sizes has {len(sizes)}")
     runner = IBMRunner(args.backend, min_qubits=max(sizes), optimization_level=args.optimization_level,
-                       fake=args.fake)
+                       fake=args.fake, mitigation=args.mitigation)
     rows, circuits = [], []
     for i, n in enumerate(sizes):
         if fetched and fetched[2][i] is not None:  # stats of the circuit that actually ran
@@ -85,7 +88,8 @@ if __name__ == "__main__":
     out = config.RESULTS_BASE_DIR / "ibm" / args.name
     out.mkdir(parents=True, exist_ok=True)
     summary = {"name": args.name, "backend": runner.name, "fake_backend": runner.is_fake, "shots": args.shots,
-               "tries": args.tries, "optimization_level": args.optimization_level, "dry_run": args.dry_run,
+               "tries": args.tries, "optimization_level": args.optimization_level, "mitigation": args.mitigation,
+               "dry_run": args.dry_run,
                "sizes": rows}
     if fetched or not args.dry_run:
         counts, job = (fetched[0], fetched[1]) if fetched else runner.run_many(circuits, args.shots)
@@ -94,7 +98,8 @@ if __name__ == "__main__":
             row.update(ghz_population(c, row["n"]))
         (out / "ghz_counts.json").write_text(json.dumps({str(r["n"]): c for r, c in zip(rows, counts)}),
                                              encoding="utf-8")
-        print(f"\n## GHZ on {runner.name} ({job['shots']} shots per size, QPU {job['qpu_seconds']} s)")
+        print(f"\n## GHZ on {runner.name}, mitigation {args.mitigation} "
+              f"({job['shots']} shots per size, QPU {job['qpu_seconds']} s)")
         print("| qubits | 2-qubit gates | ESP (predicted) | P(00..0) + P(11..1) measured | chance |")
         print("| --- | --- | --- | --- | --- |")
         for r in rows:

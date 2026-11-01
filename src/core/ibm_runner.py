@@ -19,6 +19,15 @@ Dry runs need no account: IBMRunner(fake="FakeFez") transpiles for a fake copy o
 156-qubit IBM device and reports depth / two-qubit gates. Fake backends are only used
 for transpiling here, never to execute (no artificial noise).
 
+Error mitigation (mitigation="none" | "dd" | "twirl" | "dd+twirl"): IBM's own techniques, applied by
+the runtime on the real hardware (no artificial noise is added anywhere):
+  * dd: dynamical decoupling. Idle qubits get pulse pairs (XpXm) that cancel the slow phase noise
+    while they wait for the two-qubit gates of other qubits.
+  * twirl: Pauli twirling of the two-qubit gates and of the measurement. Each shot runs a randomized
+    but equivalent version of the circuit, which turns coherent errors (that add up gate after gate)
+    into random noise; measurement twirling also removes the 0/1 bias of the readout.
+Neither changes the counts format, so the analysis is the same. Twirling uses a little more QPU time.
+
 Requires: pip install qiskit-ibm-runtime
 """
 import time
@@ -60,6 +69,22 @@ def estimated_success_probability(isa_circuit, target):
     return float(np.exp(log_esp))
 
 
+MITIGATIONS = ("none", "dd", "twirl", "dd+twirl")
+
+
+def sampler_options(mitigation="none"):
+    """SamplerV2 options for one of MITIGATIONS."""
+    if mitigation not in MITIGATIONS:
+        raise ValueError(f"mitigation must be one of {MITIGATIONS}, got {mitigation!r}")
+    options = {}
+    if "dd" in mitigation:
+        options["dynamical_decoupling"] = {"enable": True, "sequence_type": "XpXm"}
+    if "twirl" in mitigation:
+        options["twirling"] = {"enable_gates": True, "enable_measure": True,
+                               "num_randomizations": "auto", "shots_per_randomization": "auto"}
+    return options
+
+
 def fake_backend(name):
     """A fake IBM backend by class name, e.g. FakeFez or FakeMarrakesh (156 qubits)."""
     from qiskit_ibm_runtime import fake_provider
@@ -72,7 +97,10 @@ def fake_backend(name):
 class IBMRunner:
     """One backend, pass manager and sampler, reused for every circuit."""
 
-    def __init__(self, backend_name=None, *, min_qubits=1, optimization_level=3, fake=None, service=None):
+    def __init__(self, backend_name=None, *, min_qubits=1, optimization_level=3, fake=None, service=None,
+                 mitigation="none"):
+        self.mitigation = mitigation
+        self.options = sampler_options(mitigation)  # validates the name before any connection
         if fake:
             self.backend = fake_backend(fake)
             self.is_fake = True
@@ -130,16 +158,20 @@ class IBMRunner:
         }
         return isa, stats, time.time() - t0
 
+    def sampler(self):
+        """SamplerV2 for this backend with the chosen mitigation options (created once)."""
+        if self._sampler is None:
+            from qiskit_ibm_runtime import SamplerV2 as Sampler
+            self._sampler = Sampler(mode=self.backend, options=self.options)
+        return self._sampler
+
     def run_many(self, isa_circuits, shots):
         """Samples several transpiled circuits in ONE job (one queue wait, less QPU overhead).
         Returns a list of counts and the job information."""
         if self.is_fake:
             raise RuntimeError("Fake backends are only for dry runs: pass --backend or no --fake to use the QPU")
-        from qiskit_ibm_runtime import SamplerV2 as Sampler
-        if self._sampler is None:
-            self._sampler = Sampler(mode=self.backend)
         t0 = time.time()
-        job = self._sampler.run(list(isa_circuits), shots=shots)
+        job = self.sampler().run(list(isa_circuits), shots=shots)
         print(f"  job {job.job_id()} ({len(isa_circuits)} circuits) submitted to {self.name}; waiting in the queue...",
               flush=True)
         result = job.result()
@@ -149,7 +181,7 @@ class IBMRunner:
         except Exception:
             qpu_seconds = None
         info = {"job_id": job.job_id(), "backend": self.name, "shots": shots, "circuits": len(isa_circuits),
-                "qpu_seconds": qpu_seconds, "wall_seconds": time.time() - t0}
+                "mitigation": self.mitigation, "qpu_seconds": qpu_seconds, "wall_seconds": time.time() - t0}
         return counts, info
 
     def run(self, isa_circuit, shots):
@@ -157,11 +189,8 @@ class IBMRunner:
         highest qubit on the left, same as Aer) and the job information."""
         if self.is_fake:
             raise RuntimeError("Fake backends are only for dry runs: pass --backend or no --fake to use the QPU")
-        from qiskit_ibm_runtime import SamplerV2 as Sampler
-        if self._sampler is None:
-            self._sampler = Sampler(mode=self.backend)
         t0 = time.time()
-        job = self._sampler.run([isa_circuit], shots=shots)
+        job = self.sampler().run([isa_circuit], shots=shots)
         print(f"  job {job.job_id()} submitted to {self.name}; waiting in the queue...", flush=True)
         result = job.result()
         counts = result[0].data.meas.get_counts()
@@ -169,7 +198,7 @@ class IBMRunner:
             qpu_seconds = job.usage()
         except Exception:  # usage is not available on every plan / version
             qpu_seconds = None
-        info = {"job_id": job.job_id(), "backend": self.name, "shots": shots,
+        info = {"job_id": job.job_id(), "backend": self.name, "shots": shots, "mitigation": self.mitigation,
                 "qpu_seconds": qpu_seconds, "wall_seconds": time.time() - t0}
         return counts, info
 

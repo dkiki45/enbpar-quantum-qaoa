@@ -27,6 +27,7 @@ Usage (from the repo root; needs `pip install qiskit-ibm-runtime` and the saved 
     PYTHONPATH=src python -u src/experiments/run_ibm.py --name n30_grid --nodes 30 --angles grid --backend ibm_fez
     PYTHONPATH=src python -u src/experiments/run_ibm.py --name n30_abcC --nodes 30 --angles campaign --campaign abc_C --backend ibm_fez
     PYTHONPATH=src python -u src/experiments/run_ibm.py --name n156_grid --nodes 156 --graph components --angles grid --backend ibm_fez
+    PYTHONPATH=src python -u src/experiments/run_ibm.py --name n30_p3grid_ddtw --nodes 30 --angles grid --backend ibm_kingston --tries 20 --mitigation dd+twirl
 """
 import argparse
 import json
@@ -43,7 +44,7 @@ from core.graph_builder import build_graph_from_csv, haversine_m
 from core.qubo_formalization import build_mis_qubo, qubo_to_ising
 from core.classical_baseline import solve_exact_ilp
 from core.solution_decoder import decode_distribution, best_feasible_or_none, feasible_probability
-from core.ibm_runner import IBMRunner, circuit_stats, estimated_success_probability, fetch_job
+from core.ibm_runner import MITIGATIONS, IBMRunner, circuit_stats, estimated_success_probability, fetch_job
 from run_campaign import greedy_mis, tts99
 
 
@@ -186,6 +187,8 @@ if __name__ == "__main__":
     ap.add_argument("--fake", default=None, help="fake backend for --dry-run without an account, e.g. FakeFez")
     ap.add_argument("--optimization-level", type=int, default=3)
     ap.add_argument("--tries", type=int, default=10, help="transpile this many times and keep the best (highest ESP)")
+    ap.add_argument("--mitigation", choices=MITIGATIONS, default="none",
+                    help="IBM error mitigation: dynamical decoupling (dd), Pauli twirling (twirl) or both")
     ap.add_argument("--dry-run", action="store_true", help="transpile and report the circuit size only (no QPU time)")
     ap.add_argument("--job-id", default=None, help="do not submit: retrieve the result of a job already sent with "
                     "the same arguments (e.g. after the connection dropped while waiting in the queue)")
@@ -219,7 +222,8 @@ if __name__ == "__main__":
     if args.job_id:
         fetched = fetch_job(args.job_id)
         args.backend = fetched[1]["backend"]
-    runner = IBMRunner(args.backend, min_qubits=n, optimization_level=args.optimization_level, fake=args.fake)
+    runner = IBMRunner(args.backend, min_qubits=n, optimization_level=args.optimization_level, fake=args.fake,
+                       mitigation=args.mitigation)
     if fetched and fetched[2] and fetched[2][0] is not None:  # stats of the circuit that actually ran
         isa, transpile_s = fetched[2][0], 0.0
         stats = circuit_stats(isa) | {"esp": estimated_success_probability(isa, runner.backend.target),
@@ -228,7 +232,7 @@ if __name__ == "__main__":
         isa, stats, transpile_s = runner.transpile_best(qaoa_circuit(model, betas, gammas), tries=args.tries)
     print(f"\n{'=' * 70}\nIBM {args.name} | {n} poles, {len(edges)} edges (groups {sizes}) | MIS {-exact_cost:.0f} "
           f"(ILP {ilp_s:.3f} s, greedy {greedy})\nangles {source} | backend {runner.name}"
-          f"{' (fake, dry run)' if runner.is_fake else ''} | transpiled in {transpile_s:.1f} s: depth {stats['depth']}, "
+          f"{' (fake, dry run)' if runner.is_fake else ''} | mitigation {args.mitigation} | transpiled in {transpile_s:.1f} s: depth {stats['depth']}, "
           f"2-qubit depth {stats['depth_2q']}, 2-qubit gates {stats['two_qubit_gates']} "
           f"(range over {stats['tries']} tries: {stats['two_qubit_gates_range']}), ESP {stats['esp']:.3g}\n{'=' * 70}",
           flush=True)
@@ -242,7 +246,7 @@ if __name__ == "__main__":
         "greedy_size": greedy, "greedy_s": greedy_s,
         "p": args.p, "angles_source": source, "betas": betas, "gammas": gammas,
         "backend": runner.name, "fake_backend": runner.is_fake, "optimization_level": args.optimization_level,
-        "transpile_s": transpile_s, "circuit": stats, "dry_run": args.dry_run,
+        "transpile_s": transpile_s, "circuit": stats, "mitigation": args.mitigation, "dry_run": args.dry_run,
         "random_baseline": random_baseline(n, edges, exact_cost, args.shots),
     }
     if fetched:

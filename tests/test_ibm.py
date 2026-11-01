@@ -62,3 +62,16 @@ def test_transpile_best_keeps_highest_esp_on_fake_backend():
     isa, stats, _ = runner.transpile_best(ghz_circuit(5), tries=4)
     assert stats["two_qubit_gates"] == 4                                   # a chain fits without SWAPs
     assert 0 < stats["esp"] <= 1 and stats["esp"] == pytest.approx(stats["esp_range"][1])
+
+
+def test_mitigation_options_are_accepted_by_the_sampler():
+    from qiskit_ibm_runtime.options import SamplerOptions
+    from core.ibm_runner import MITIGATIONS, IBMRunner, sampler_options
+    assert sampler_options("none") == {}
+    both = sampler_options("dd+twirl")
+    assert both["dynamical_decoupling"]["enable"] and both["twirling"]["enable_gates"]
+    assert "twirling" not in sampler_options("dd") and "dynamical_decoupling" not in sampler_options("twirl")
+    for m in MITIGATIONS:
+        SamplerOptions(**sampler_options(m))                              # valid for qiskit-ibm-runtime
+    with pytest.raises(ValueError):
+        IBMRunner(fake="FakeFez", mitigation="zne")
