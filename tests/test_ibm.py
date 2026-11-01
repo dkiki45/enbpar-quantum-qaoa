@@ -75,3 +75,16 @@ def test_mitigation_options_are_accepted_by_the_sampler():
         SamplerOptions(**sampler_options(m))                              # valid for qiskit-ibm-runtime
     with pytest.raises(ValueError):
         IBMRunner(fake="FakeFez", mitigation="zne")
+
+
+def test_size_sweep_graphs_are_nested_and_noiseless_sampling_works():
+    from types import SimpleNamespace
+    from size_sweep import build_instance, ideal_counts
+    from run_ibm import qaoa_circuit
+    args = SimpleNamespace(start_node=30, tolerance=2.0)
+    e10, cost10, greedy10, model10 = build_instance(10, args)
+    e15, *_ = build_instance(15, args)
+    assert set(e10) <= set(e15)                                  # BFS pieces of the same graph
+    assert greedy10 == -cost10 == 4
+    counts = ideal_counts(qaoa_circuit(model10, [0.4], [3.4]), 500)
+    assert sum(counts.values()) == 500 and all(len(k) == 10 for k in counts)

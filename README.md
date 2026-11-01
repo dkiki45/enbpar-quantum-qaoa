@@ -72,6 +72,10 @@ python ibm_setup.py                  # once, outside the repo, with your own API
 PYTHONPATH=src python -u src/experiments/run_ibm.py --name dry30 --nodes 30 --fake FakeFez --dry-run       # circuit size, no account needed
 PYTHONPATH=src python -u src/experiments/run_ibm.py --name dry156 --nodes 156 --graph components --fake FakeFez --dry-run
 PYTHONPATH=src python -u src/experiments/run_ibm.py --name n30_grid --nodes 30 --angles grid               # QPU run
+PYTHONPATH=src python -u src/experiments/run_ibm.py --name n30_dd --nodes 30 --angles grid --mitigation dd  # IBM error mitigation: dd, twirl or dd+twirl
+PYTHONPATH=src python -u src/experiments/ghz_test.py --name ghz --backend ibm_kingston                    # GHZ noise curve (signal vs two-qubit gates)
+PYTHONPATH=src python -u src/experiments/size_sweep.py --name sweep_p3 --backend ibm_kingston             # 10-30 poles in one job, with noiseless reference
+PYTHONPATH=src python src/experiments/ibm_analysis.py                                                     # conflicts, same-marginals baseline, classical repair
 ```
 Results go to `src/results/ibm/<name>/` (summary with P(optimum), P(feasible), approximation ratio, TTS99, QPU seconds, plus the random-sampling chance level).
 
